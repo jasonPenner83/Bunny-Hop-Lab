@@ -33,6 +33,17 @@ cached and works with no signal.
   against gravity to flag a wrong Clip speed setting.
 - Targets are coaching ranges, tune them in CUES / analyze() in index.html.
 
+## Overlay, reference and key frames
+
+- Layer toggles (Video, Skeleton, Reference) are remembered per device.
+- Reference: a synthetic rider with every metric on target, time-aligned to your run
+  phase by phase and pinned to your pedals, scaled to your leg length.
+- Key frames: one JPEG per phase plus any metric moment, captured with the current
+  layers and a caption band. Save one, or Save all through the share sheet.
+- Rider tracking: up to two poses per frame; the rider is followed by continuity from the
+  clearest detection, and only the longest stretch where the hips, knees, ankles and
+  shoulders are visible and inside the frame is analyzed.
+
 ## Files
 
 index.html (whole app), manifest.webmanifest, sw.js (offline cache), icons.

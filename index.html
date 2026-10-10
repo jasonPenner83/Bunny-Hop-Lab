@@ -19,7 +19,7 @@
   --accent:#d9480f; --accent-ink:#ffffff; --accent-soft:#f8dccd;
   --good:#2f7d4f; --good-soft:#d6ecdd; --work:#a86a00; --work-soft:#f5e6c4; --miss:#b3261e; --miss-soft:#f6d6d3;
   --stage:#1d2622; --stage-ink:#e9efe9; --stage-dim:#7c8a83; --bone:#ffffff;
-  --c-knee:#d9480f; --c-hip:#2b6cb0; --c-foot:#2f7d4f;
+  --c-knee:#d9480f; --c-hip:#2b6cb0; --c-foot:#2f7d4f; --c-ref:#3fd6e8;
   --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -30,19 +30,19 @@
   --accent:#ff7a3d; --accent-ink:#1a0d05; --accent-soft:#3a2216;
   --good:#5fc28a; --good-soft:#18322a; --work:#e3a93c; --work-soft:#33290f; --miss:#f0776c; --miss-soft:#3b1b19;
   --stage:#0b100e; --stage-ink:#e4ebe6; --stage-dim:#6a7872; --bone:#ffffff;
-  --c-knee:#ff7a3d; --c-hip:#6aa8ec; --c-foot:#5fc28a; color-scheme:dark}}
+  --c-knee:#ff7a3d; --c-hip:#6aa8ec; --c-foot:#5fc28a; --c-ref:#3fd6e8; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#111816; --surface:#19221f; --line:#2c3833; --ink:#e4ebe6; --muted:#93a19a;
   --accent:#ff7a3d; --accent-ink:#1a0d05; --accent-soft:#3a2216;
   --good:#5fc28a; --good-soft:#18322a; --work:#e3a93c; --work-soft:#33290f; --miss:#f0776c; --miss-soft:#3b1b19;
   --stage:#0b100e; --stage-ink:#e4ebe6; --stage-dim:#6a7872; --bone:#ffffff;
-  --c-knee:#ff7a3d; --c-hip:#6aa8ec; --c-foot:#5fc28a; color-scheme:dark}
+  --c-knee:#ff7a3d; --c-hip:#6aa8ec; --c-foot:#5fc28a; --c-ref:#3fd6e8; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px}
-.brand{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.brand{white-space:nowrap;flex:none;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
 .brand span{color:var(--accent)}
-.source{margin-left:auto;font-size:12px;font-family:var(--f-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
+.source{margin-left:auto;min-width:0;text-align:right;font-size:12px;font-family:var(--f-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .wrap{max-width:720px;margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column;gap:18px}
 h2{font-family:var(--f-display);font-weight:600;font-size:20px;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
 .skills{display:flex;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
@@ -50,7 +50,7 @@ h2{font-family:var(--f-display);font-weight:600;font-size:20px;text-transform:up
 .skills button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
 .skills button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stage{position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden}
-.frame{position:relative;width:100%;aspect-ratio:16/9;margin:0 auto;max-width:100%}
+.frame{position:relative;width:100%;aspect-ratio:16/9;margin:0 auto;max-width:100%;background:var(--stage)}
 .frame video,.frame canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .frame video{object-fit:contain;background:#000}
 .busy{position:absolute;inset:0;background:color-mix(in srgb,var(--stage) 82%,transparent);color:var(--stage-ink);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:16px;text-align:center}
@@ -63,6 +63,30 @@ h2{font-family:var(--f-display);font-weight:600;font-size:20px;text-transform:up
 .ibtn.play{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .ibtn svg{width:18px;height:18px}
 .time{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:46px;text-align:right;font-variant-numeric:tabular-nums}
+.layers{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.layers button{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:600 14px var(--f-body);cursor:pointer}
+.layers button i{width:16px;height:4px;border-radius:2px;background:currentColor;opacity:.5}
+.layers button[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+.layers button[aria-pressed="true"] i{opacity:1}
+.layers button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.kf-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.kf-head h2{margin:0;margin-right:auto}
+.kf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.shot{margin:0;min-width:0}
+.shot button{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--stage);cursor:zoom-in}
+.shot button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.shot img{display:block;width:100%;height:auto}
+.shot figcaption{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:6px;font-size:13px}
+.shot figcaption b{font-family:var(--f-display);font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.03em}
+.shot .when{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.viewer{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:12px;width:min(960px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto}
+.viewer::backdrop{background:rgba(5,8,7,.75)}
+.viewer img{display:block;width:100%;height:auto;max-height:70dvh;object-fit:contain;background:#000}
+.vbar{display:flex;align-items:center;gap:8px;padding:10px 12px 0}
+.vbar span{flex:1;text-align:center;font-family:var(--f-display);font-weight:600;font-size:17px;text-transform:uppercase;letter-spacing:.03em;min-width:0}
+.vactions{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px}
+.vactions .btn{flex:1;min-width:110px}
+.viewer .note{padding:0 12px 12px;margin:0}
 .phases{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
 .phases::-webkit-scrollbar{display:none}
 .chip{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 10px;text-align:left;cursor:pointer;font-family:var(--f-body)}
@@ -147,6 +171,11 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
       <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Frame">
       <span class="time" id="time">0.00s</span>
     </div>
+    <div class="layers" id="layers" role="group" aria-label="Show on replay">
+      <button type="button" data-layer="video" aria-pressed="true"><i></i>Video</button>
+      <button type="button" data-layer="skeleton" aria-pressed="true"><i style="color:var(--c-knee)"></i>Skeleton</button>
+      <button type="button" data-layer="ref" aria-pressed="true"><i style="color:var(--c-ref)"></i>Reference</button>
+    </div>
     <div class="phases" id="phases" role="list"></div>
   </section>
 
@@ -155,6 +184,16 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
   <section>
     <h2>Breakdown</h2>
     <ul class="metrics" id="metrics"></ul>
+  </section>
+
+  <section aria-labelledby="kfTitle">
+    <div class="kf-head">
+      <h2 id="kfTitle">Key frames</h2>
+      <button class="btn small" id="kfShare" hidden>Save all</button>
+      <button class="btn small" id="kfCapture">Capture key frames</button>
+    </div>
+    <p class="note" id="kfStatus" role="status"></p>
+    <div class="kf-grid" id="kfGrid"></div>
   </section>
 
   <section>
@@ -191,7 +230,14 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
     <ul class="saved" id="saved"></ul>
   </section>
 
-  <p class="note">Targets are coaching ranges for a side-on bunny hop, not lab norms. Heights come from your foot and hip movement scaled by rider height, so treat centimetres as estimates. Pose tracking runs on your phone; clips are never uploaded.</p>
+  <dialog class="viewer" id="viewer" aria-label="Key frame">
+    <img id="vImg" alt="">
+    <div class="vbar"><button class="ibtn" id="vPrev" aria-label="Previous key frame"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 5l-7 7 7 7z"/></svg></button><span id="vCap"></span><button class="ibtn" id="vNext" aria-label="Next key frame"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 5l7 7-7 7z"/></svg></button></div>
+    <div class="vactions"><button class="btn primary small" id="vSave">Save image</button><button class="btn small" id="vGo">Go to frame</button><button class="btn small" id="vClose">Close</button></div>
+    <p class="note">On iPhone you can also press and hold the picture to save it to Photos.</p>
+  </dialog>
+
+  <p class="note">The dashed blue rider is a reference run with every metric on target, matched to your timing and pinned to your pedals. Targets are coaching ranges for a side-on bunny hop, not lab norms. Heights come from your foot and hip movement scaled by rider height, so treat centimetres as estimates. Pose tracking runs on your phone; clips are never uploaded.</p>
 </main>
 
 
@@ -320,12 +366,12 @@ function analyzeHop(frames,opts={}){
 function fmtDeg(v){return Number.isFinite(v)?Math.round(v)+'°':'—'}
 
 // Synthetic rider for the sample run (geometry in metres, y up).
-function makeHopSample(){
+function makeHopSample(K={}){
   const fps=30,dur=2.5,n=Math.round(dur*fps)+1,S=250,OX=430,OY=650;
   const ease=u=>u*u*(3-2*u);
   const kf=(t,keys)=>{if(t<=keys[0][0])return keys[0].slice(1);for(let i=1;i<keys.length;i++){if(t<=keys[i][0]){const a=keys[i-1],b=keys[i],u=ease((t-a[0])/(b[0]-a[0]));return a.slice(1).map((v,j)=>v+(b[j+1]-v)*u)}}return keys[keys.length-1].slice(1)};
-  const hipK=[[0,-.08,.86],[.45,-.08,.86],[.78,-.02,.64],[1.0,-.40,.70],[1.16,-.28,.86],[1.38,-.10,.55],[1.62,-.06,.80],[1.82,-.04,.60],[2.2,-.08,.84],[2.5,-.08,.86]];
-  const armK=[[0,.50],[.45,.50],[.78,.44],[1.0,.52],[1.16,.52],[1.38,.42],[1.62,.50],[1.82,.44],[2.2,.50]];
+  const hipK=K.hipK||[[0,-.08,.86],[.45,-.08,.86],[.78,-.02,.64],[1.0,-.40,.70],[1.16,-.28,.86],[1.38,-.10,.55],[1.62,-.06,.80],[1.82,-.04,.60],[2.2,-.08,.84],[2.5,-.08,.86]];
+  const armK=K.armK||[[0,.50],[.45,.50],[.78,.44],[1.0,.52],[1.16,.52],[1.38,.42],[1.62,.50],[1.82,.44],[2.2,.50]];
   const pitchK=[[0,0],[.85,0],[1.08,18],[1.3,6],[1.5,0],[2.5,0]];
   const liftK=[[0,0],[1.1,0],[1.37,.36],[1.6,0],[2.5,0]];
   const rot=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),y:p.x*Math.sin(a)+p.y*Math.cos(a)});
@@ -455,7 +501,7 @@ function sampleKit(){
   };
   return{ease,kf,pose};
 }
-function makeKickerSample(){
+function makeKickerSample(K={}){
   const {kf,ease,pose}=sampleKit();
   const fps=30,dur=2.3,n=Math.round(dur*fps)+1,S=135,OX=40,OY=610;
   const r=.37,wb=1.22,v=3.2,rampX=2.0,lipX=3.2,h=.5;
@@ -463,8 +509,8 @@ function makeKickerSample(){
   const lipAng=Math.atan(2*h/(lipX-rampX));
   const x0=0.2,t0=(lipX-x0)/v,vy0=v*Math.tan(lipAng),y0=h+r,g=9.81;
   const tau=(vy0+Math.sqrt(vy0*vy0+2*g*(y0-r)))/g,t1=t0+tau,landAng=-6*Math.PI/180;
-  const hipK=[[0,-.15,.80],[.45,-.15,.80],[.62,-.12,.68],[.82,-.10,.64],[.88,-.02,.93],[1.10,-.42,.68],[1.40,-.40,.70],[1.56,-.15,.80],[1.64,-.12,.78],[1.82,-.08,.58],[2.15,-.15,.80],[2.3,-.15,.80]];
-  const armK=[[0,.50],[.45,.50],[.82,.44],[.94,.50],[1.10,.47],[1.45,.47],[1.60,.50],[1.82,.44],[2.15,.50]];
+  const hipK=K.hipK||[[0,-.15,.80],[.45,-.15,.80],[.62,-.12,.68],[.82,-.10,.64],[.88,-.02,.93],[1.10,-.42,.68],[1.40,-.40,.70],[1.56,-.15,.80],[1.64,-.12,.78],[1.82,-.08,.58],[2.15,-.15,.80],[2.3,-.15,.80]];
+  const armK=K.armK||[[0,.50],[.45,.50],[.82,.44],[.94,.50],[1.10,.47],[1.45,.47],[1.60,.50],[1.82,.44],[2.15,.50]];
   const frames=[];
   for(let i=0;i<n;i++){
     const t=i/fps,xr=x0+v*t;let R,a;
@@ -486,10 +532,67 @@ function makeKickerSample(){
 
 const SKILLS={
   hop:{name:'Bunny hop',analyze:(f,o)=>analyzeHop(f,o),sample:()=>makeHopSample(),
+    ideal:()=>makeHopSample({hipK:[[0,-.08,.86],[.45,-.08,.86],[.78,-.02,.64],[1.0,-.40,.70],[1.10,-.28,.86],[1.20,-.26,.86],[1.38,-.10,.55],[1.62,-.06,.80],[1.82,-.04,.60],[2.2,-.08,.84],[2.5,-.08,.86]],armK:[[0,.50],[.45,.50],[.78,.46],[.92,.565],[1.18,.56],[1.38,.44],[1.62,.50],[1.82,.44],[2.2,.50]]}),
     tips:['Film side-on, 4–6 m from the line, with the phone level at hip height. Rider and bike stay fully in frame start to finish.','Keep the phone still. A tripod or a buddy leaning on something works; panning throws off the height numbers.','Slow-mo helps a lot. Set the clip speed above to match so timings come out in real seconds.','Trim to one hop with a second of riding before and after. Long clips take longer to track.','Daylight and a rider in contrasting clothes give the tracker the best shot.']},
   kicker:{name:'Kicker jump',analyze:(f,o)=>analyzeKicker(f,o),sample:()=>makeKickerSample(),
+    ideal:()=>makeKickerSample({hipK:[[0,-.15,.80],[.45,-.15,.80],[.62,-.12,.68],[.80,-.10,.64],[.88,-.04,.93],[.96,-.06,.93],[1.10,-.18,.70],[1.40,-.16,.72],[1.56,-.14,.80],[1.64,-.12,.78],[1.82,-.08,.58],[2.15,-.15,.80],[2.3,-.15,.80]]}),
     tips:['Stand off to the side, level with the lip, far enough back that the last 2–3 m of approach, the lip and the landing all fit in frame.','Shoot landscape and keep the phone still. The app measures height and airtime against a fixed frame, so panning breaks them.','Hold the phone at about lip height. Shooting from far below or above skews the bike-angle read.','Slow-mo is great for the pop. Set Clip speed to match; the app checks airtime against gravity and flags a mismatch.','Trim to one jump. Start just before the ramp and end a second after landing.']}
 };
+
+// ---------- Rider tracking: pick the rider, keep only frames where they are really in view ----------
+const CORE=['sh','hip','kn','an'];
+function coreOk(lm,s,W,H){return CORE.every(k=>{const p=lm[SIDE[s][k]];return p&&p.v>=0.5&&p.x>=-0.02*W&&p.x<=1.02*W&&p.y>=-0.02*H&&p.y<=1.02*H})}
+function bestSide(lm,W,H){const sc=s=>CORE.reduce((a,k)=>a+(lm[SIDE[s][k]]?.v||0),0);const ok=['L','R'].filter(s=>coreOk(lm,s,W,H));if(!ok.length)return null;return ok.length===2?(sc('L')>=sc('R')?'L':'R'):ok[0]}
+function legLen(lm,s){const g=k=>lm[SIDE[s][k]];return dist(g('hip'),g('kn'))+dist(g('kn'),g('an'))}
+function poseCenter(lm){return{x:(lm[23].x+lm[24].x)/2,y:(lm[23].y+lm[24].y)/2}}
+function poseSize(lm){const ys=[0,11,12,23,24,27,28].map(i=>lm[i]?.y).filter(Number.isFinite);return ys.length?Math.max(...ys)-Math.min(...ys):0}
+function trackRider(raw,W,H,fps=30){
+  const n=raw.length;
+  // seed: the biggest, clearest valid pose anywhere in the clip
+  let seed=-1,seedP=null,best=0;
+  raw.forEach((fr,f)=>(fr.poses||[]).forEach(lm=>{const s=bestSide(lm,W,H);if(!s)return;const v=CORE.reduce((a,k)=>a+lm[SIDE[s][k]].v,0)/4;const sc=poseSize(lm)*v;if(sc>best){best=sc;seed=f;seedP=lm}}));
+  if(seed<0)throw new Error('No rider found in this clip. Film side-on with the whole rider in frame.');
+  const ref=poseSize(seedP);
+  const chosen=new Array(n).fill(null);chosen[seed]=seedP;
+  const walk=step=>{let last=seedP,lastF=seed;for(let f=seed+step;f>=0&&f<n;f+=step){
+    const gap=Math.abs(f-lastF),lim=Math.min(1.0,0.3*gap)*ref,c0=poseCenter(last);
+    let pick=null,pd=Infinity;for(const lm of raw[f].poses||[]){const d=dist(poseCenter(lm),c0);if(d<pd){pd=d;pick=lm}}
+    if(pick&&pd<=lim){chosen[f]=pick;last=pick;lastF=f}}};
+  walk(1);walk(-1);
+  // validity: core joints visible and inside the frame, limb lengths plausible
+  const sides=chosen.map(lm=>lm?bestSide(lm,W,H):null);
+  const legs=chosen.map((lm,f)=>sides[f]?legLen(lm,sides[f]):NaN),medLeg=median(legs);
+  const valid=chosen.map((lm,f)=>!!sides[f]&&legs[f]>=0.55*medLeg&&legs[f]<=1.6*medLeg);
+  // longest stretch of valid frames, bridging short dropouts
+  const maxGap=Math.round(0.35*fps);let segs=[],cur=null;
+  for(let f=0;f<n;f++){if(!valid[f])continue;if(cur&&f-cur.i1-1<=maxGap){cur.i1=f;cur.cnt++}else{cur={i0:f,i1:f,cnt:1};segs.push(cur)}}
+  const win=segs.reduce((a,s)=>!a||s.cnt>a.cnt?s:a,null);
+  const frames=[];for(let f=win.i0;f<=win.i1;f++)frames.push({mt:raw[f].mt,t:raw[f].mt,lm:valid[f]?chosen[f]:null});
+  return{frames,i0:win.i0,i1:win.i1,valid:win.cnt,total:n};
+}
+
+// ---------- Reference rider: an on-target run, time-aligned by phase and pinned to your pedals ----------
+const REF_JOINTS=['nose','sh','el','wr','hip','kn','an'];
+const refCache={};
+function refModel(skill){
+  if(refCache[skill])return refCache[skill];
+  const sm=SKILLS[skill].ideal();const A=SKILLS[skill].analyze(sm.frames,{heightCm:178});
+  const rel=A.t.map((_,j)=>{const o={};for(const k of REF_JOINTS){o[k]={x:(A.P[k][j].x-A.P.an[j].x)*A.dir/A.L,y:(A.P[k][j].y-A.P.an[j].y)/A.L}}return o});
+  return refCache[skill]={A,rel};
+}
+function buildRef(A,skill){
+  const R=refModel(skill),RA=R.A,tr0=A.t[0],tf0=RA.t[0],dur=RA.t[RA.n-1]-tf0;
+  let anchors=[];for(const p of A.phases){const q=RA.phases.find(x=>x.key===p.key);if(p.i>=0&&q&&q.i>=0)anchors.push([A.t[p.i]-tr0,RA.t[q.i]-tf0])}
+  anchors.sort((a,b)=>a[0]-b[0]);const mono=[];for(const a of anchors){const l=mono[mono.length-1];if(!l||a[0]>l[0]&&a[1]>l[1])mono.push(a)}
+  const map=tr=>{if(!mono.length)return tr;if(tr<=mono[0][0])return mono[0][1]+(tr-mono[0][0]);const l=mono[mono.length-1];if(tr>=l[0])return l[1]+(tr-l[0]);
+    for(let k=1;k<mono.length;k++)if(tr<=mono[k][0]){const a=mono[k-1],b=mono[k],u=(tr-a[0])/(b[0]-a[0]);return a[1]+u*(b[1]-a[1])}};
+  const fps=(RA.n-1)/Math.max(1e-6,dur);
+  return A.t.map((t,i)=>{
+    const tf=Math.max(0,Math.min(dur,map(t-tr0))),x=tf*fps,j=Math.min(RA.n-2,Math.floor(x)),u=Math.min(1,x-j);
+    const a=R.rel[j],b=R.rel[j+1],an=A.P.an[i],o={};
+    for(const k of REF_JOINTS){const rx=a[k].x+(b[k].x-a[k].x)*u,ry=a[k].y+(b[k].y-a[k].y)*u;o[k]={x:an.x+rx*A.L*A.dir,y:an.y+ry*A.L}}
+    return o});
+}
 // ==END ANALYSIS==
 
 const $=id=>document.getElementById(id);
@@ -502,6 +605,7 @@ let S={mode:'sample',frames:[],A:null,cur:0,playing:false,sample:null,videoW:128
 // settings
 const settings=store.get('hoplab.settings',{height:178,slowmo:'1',side:'auto'});
 if(!SKILLS[settings.skill])settings.skill='hop';
+settings.layers={video:true,skeleton:true,ref:true,...(settings.layers||{})};
 $('height').value=settings.height;$('slowmo').value=settings.slowmo;$('side').value=settings.side;
 for(const id of ['height','slowmo','side'])$(id).addEventListener('change',()=>{settings.height=+$('height').value||178;settings.slowmo=$('slowmo').value;settings.side=$('side').value;store.set('hoplab.settings',settings);if(S.frames.length&&S.mode!=='busy'){try{runAnalysis();setStatus(S.A.note||'')}catch(e){setStatus(e.message,true)}}});
 
@@ -511,7 +615,9 @@ function runAnalysis(){
   const opts={heightCm:+$('height').value||178,side:$('side').value};
   if(S.mode==='video'){const k=+$('slowmo').value||1;S.frames.forEach(f=>f.t=f.mt/k)}
   S.A=SKILLS[settings.skill].analyze(S.frames,opts);
+  try{S.ref=buildRef(S.A,settings.skill)}catch{S.ref=null}
   renderAll();
+  Promise.resolve(document.fonts&&document.fonts.ready).then(()=>captureKeyFrames());
 }
 
 // ---------- rendering ----------
@@ -580,50 +686,65 @@ $('chart').addEventListener('click',chartSeek);
 let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>S.A&&renderChart(),150)});
 
 // ---------- stage drawing ----------
-function drawFrame(i){
-  const A=S.A;if(!A)return;
-  const W=canvas.width,H=canvas.height,k=W/1280;
-  ctx.save();
+const L=()=>settings.layers;
+function drawScene(c,i,W,H,o){
+  const A=S.A;if(!A)return null;
+  const k=W/1280;
+  c.save();
   if(S.mode==='sample'){
-    ctx.fillStyle=css('--stage');ctx.fillRect(0,0,W,H);
-    const gy=S.sample.groundY;
-    ctx.fillStyle=css('--stage-dim');ctx.globalAlpha=.25;ctx.fillRect(0,gy,W,H-gy);ctx.globalAlpha=1;
-    ctx.strokeStyle=css('--stage-dim');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();
-    if(S.sample.terrain){const T=S.sample.terrain;ctx.fillStyle=css('--stage-dim');ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(T[0].x,gy);for(const q of T)ctx.lineTo(q.x,q.y);ctx.lineTo(T[T.length-1].x,gy);ctx.closePath();ctx.fill();ctx.globalAlpha=1}
-    const b=S.frames[i].bike,r=S.sample.wheelPx,bs=S.sample.scale||1;
-    ctx.lineWidth=5*bs;ctx.strokeStyle=css('--stage-dim');
-    for(const w of [b.rear,b.front]){ctx.beginPath();ctx.arc(w.x,w.y,r,0,Math.PI*2);ctx.stroke()}
-    ctx.lineWidth=7*bs;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
-    ctx.moveTo(b.rear.x,b.rear.y);ctx.lineTo(b.bb.x,b.bb.y);ctx.lineTo(b.htBot.x,b.htBot.y);ctx.lineTo(b.htTop.x,b.htTop.y);ctx.lineTo(b.seat.x,b.seat.y);ctx.lineTo(b.bb.x,b.bb.y);
-    ctx.moveTo(b.seat.x,b.seat.y);ctx.lineTo(b.rear.x,b.rear.y);ctx.moveTo(b.htBot.x,b.htBot.y);ctx.lineTo(b.front.x,b.front.y);ctx.moveTo(b.htTop.x,b.htTop.y);ctx.lineTo(b.grip.x,b.grip.y);ctx.stroke();
-  }else{
-    ctx.clearRect(0,0,W,H);
-  }
-  const P=A.P,p=key=>P[key][i];
+    c.fillStyle=css('--stage');c.fillRect(0,0,W,H);
+    if(o.backdrop){
+      const gy=S.sample.groundY;
+      c.fillStyle=css('--stage-dim');c.globalAlpha=.25;c.fillRect(0,gy,W,H-gy);c.globalAlpha=1;
+      c.strokeStyle=css('--stage-dim');c.lineWidth=2;c.beginPath();c.moveTo(0,gy);c.lineTo(W,gy);c.stroke();
+      if(S.sample.terrain){const T=S.sample.terrain;c.fillStyle=css('--stage-dim');c.globalAlpha=.55;c.beginPath();c.moveTo(T[0].x,gy);for(const q of T)c.lineTo(q.x,q.y);c.lineTo(T[T.length-1].x,gy);c.closePath();c.fill();c.globalAlpha=1}
+      const b=S.frames[i].bike,r=S.sample.wheelPx,bs=S.sample.scale||1;
+      c.lineWidth=5*bs;c.strokeStyle=css('--stage-dim');
+      for(const w of [b.rear,b.front]){c.beginPath();c.arc(w.x,w.y,r,0,Math.PI*2);c.stroke()}
+      c.lineWidth=7*bs;c.lineCap='round';c.lineJoin='round';c.beginPath();
+      c.moveTo(b.rear.x,b.rear.y);c.lineTo(b.bb.x,b.bb.y);c.lineTo(b.htBot.x,b.htBot.y);c.lineTo(b.htTop.x,b.htTop.y);c.lineTo(b.seat.x,b.seat.y);c.lineTo(b.bb.x,b.bb.y);
+      c.moveTo(b.seat.x,b.seat.y);c.lineTo(b.rear.x,b.rear.y);c.moveTo(b.htBot.x,b.htBot.y);c.lineTo(b.front.x,b.front.y);c.moveTo(b.htTop.x,b.htTop.y);c.lineTo(b.grip.x,b.grip.y);c.stroke();
+    }
+  }else if(o.videoImg){c.drawImage(vid,0,0,W,H)}
+  else if(o.fillStage){c.fillStyle=css('--stage');c.fillRect(0,0,W,H)}
+  else c.clearRect(0,0,W,H);
+  const halo=S.mode==='video'||o.videoImg;
   const lw=Math.max(3,6*k);
-  ctx.lineCap='round';ctx.lineJoin='round';
-  const halo=S.mode==='video';
-  const seg=(a,b,col)=>{if(halo){ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=lw+4*Math.max(1,k*2);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()};
-  const white='#ffffff',knee=css('--c-knee'),hip=css('--c-hip');
-  seg(p('sh'),p('hip'),white);seg(p('sh'),p('el'),white);seg(p('el'),p('wr'),white);
-  seg(p('hip'),p('kn'),knee);seg(p('kn'),p('an'),knee);
-  const head=p('nose');ctx.strokeStyle=white;ctx.lineWidth=lw*.7;ctx.beginPath();ctx.arc(head.x,head.y,22*k*(S.mode==='sample'?1.6:1),0,Math.PI*2);ctx.stroke();
-  for(const j of ['sh','el','wr','hip','kn','an']){const q=p(j);ctx.fillStyle=j==='hip'?hip:j==='kn'||j==='an'?knee:white;ctx.beginPath();ctx.arc(q.x,q.y,lw*1.1,0,Math.PI*2);ctx.fill()}
-  // angle tags
-  const tag=(pt,txt,dx,dy,col)=>{const fs=Math.round(22*k)+'px';ctx.font=`600 ${fs} "IBM Plex Mono",ui-monospace,monospace`;const w=ctx.measureText(txt).width+14*k,h=28*k,x=pt.x+dx*k,y=pt.y+dy*k;ctx.fillStyle='rgba(10,14,12,.78)';ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y-h/2,w,h,6*k):ctx.rect(x,y-h/2,w,h);ctx.fill();ctx.fillStyle=col;ctx.textBaseline='middle';ctx.fillText(txt,x+7*k,y+1)};
-  const d=A.dir;
-  tag(p('kn'),fmtDeg(A.knee[i]),d>0?18:-90,-6,knee);
-  tag(p('hip'),fmtDeg(A.hipAng[i]),d>0?-96:18,0,hip);
-  tag(p('el'),fmtDeg(A.elbow[i]),d>0?-92:18,18,white);
-  // phase label
+  c.lineCap='round';c.lineJoin='round';
+  const line=(a,b,col,w,dash)=>{c.setLineDash(dash||[]);if(halo){c.strokeStyle='rgba(0,0,0,.55)';c.lineWidth=w+4*Math.max(1,k*2);c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()}c.strokeStyle=col;c.lineWidth=w;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.setLineDash([])};
+  const headR=22*k*(S.mode==='sample'?1.6:1)*(S.sample&&S.mode==='sample'?(S.sample.scale||1):1);
+  // reference rider (drawn first so yours sits on top)
+  if(o.ref&&S.ref&&S.ref[i]){
+    const R=S.ref[i],col=css('--c-ref'),w=lw*.8,dash=[lw*1.4,lw*1.1];
+    line(R.sh,R.hip,col,w,dash);line(R.sh,R.el,col,w,dash);line(R.el,R.wr,col,w,dash);line(R.hip,R.kn,col,w,dash);line(R.kn,R.an,col,w,dash);
+    c.strokeStyle=col;c.lineWidth=w*.8;c.setLineDash(dash);c.beginPath();c.arc(R.nose.x,R.nose.y,headR,0,Math.PI*2);c.stroke();c.setLineDash([]);
+    for(const j of ['sh','el','wr','hip','kn']){const q=R[j];c.fillStyle=col;c.beginPath();c.arc(q.x,q.y,lw*.75,0,Math.PI*2);c.fill()}
+  }
+  if(o.skeleton){
+    const P=A.P,p=key=>P[key][i];
+    const white='#ffffff',knee=css('--c-knee'),hip=css('--c-hip');
+    line(p('sh'),p('hip'),white,lw);line(p('sh'),p('el'),white,lw);line(p('el'),p('wr'),white,lw);
+    line(p('hip'),p('kn'),knee,lw);line(p('kn'),p('an'),knee,lw);
+    const head=p('nose');c.strokeStyle=white;c.lineWidth=lw*.7;c.beginPath();c.arc(head.x,head.y,headR,0,Math.PI*2);c.stroke();
+    for(const j of ['sh','el','wr','hip','kn','an']){const q=p(j);c.fillStyle=j==='hip'?hip:j==='kn'||j==='an'?knee:white;c.beginPath();c.arc(q.x,q.y,lw*1.1,0,Math.PI*2);c.fill()}
+    const tag=(pt,txt,dx,dy,col)=>{const fs=Math.round(22*k)+'px';c.font=`600 ${fs} "IBM Plex Mono",ui-monospace,monospace`;const w=c.measureText(txt).width+14*k,h=28*k,x=pt.x+dx*k,y=pt.y+dy*k;c.fillStyle='rgba(10,14,12,.78)';c.beginPath();c.roundRect?c.roundRect(x,y-h/2,w,h,6*k):c.rect(x,y-h/2,w,h);c.fill();c.fillStyle=col;c.textBaseline='middle';c.fillText(txt,x+7*k,y+1)};
+    const d=A.dir;
+    tag(p('kn'),fmtDeg(A.knee[i]),d>0?18:-90,-6,knee);
+    tag(p('hip'),fmtDeg(A.hipAng[i]),d>0?-96:18,0,hip);
+    tag(p('el'),fmtDeg(A.elbow[i]),d>0?-92:18,18,white);
+  }
   let cur=null;for(const ph of A.phases){if(ph.i>=0&&ph.i<=i&&(!cur||ph.i>=cur.i))cur=ph}
-  if(halo){ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=8*Math.max(1,k*2)}
-  ctx.font=`700 ${Math.round(34*k)}px "Barlow Condensed","Arial Narrow",sans-serif`;ctx.textBaseline='top';ctx.fillStyle=white;
-  ctx.fillText((cur?cur.name:'Approach').toUpperCase(),20*k,18*k);
-  ctx.font=`500 ${Math.round(20*k)}px "IBM Plex Mono",ui-monospace,monospace`;ctx.fillStyle='rgba(255,255,255,.75)';
-  ctx.fillText(A.live(i),20*k,58*k);
-  ctx.restore();
-  // phase chips
+  if(halo){c.shadowColor='rgba(0,0,0,.8)';c.shadowBlur=8*Math.max(1,k*2)}
+  c.font=`700 ${Math.round(34*k)}px "Barlow Condensed","Arial Narrow",sans-serif`;c.textBaseline='top';c.fillStyle='#ffffff';
+  c.fillText((cur?cur.name:'Approach').toUpperCase(),20*k,18*k);
+  c.font=`500 ${Math.round(20*k)}px "IBM Plex Mono",ui-monospace,monospace`;c.fillStyle='rgba(255,255,255,.75)';
+  c.fillText(A.live(i),20*k,58*k);
+  c.restore();
+  return cur;
+}
+function drawFrame(i){
+  if(!S.A)return;
+  const cur=drawScene(ctx,i,canvas.width,canvas.height,{backdrop:L().video,skeleton:L().skeleton,ref:L().ref});
   document.querySelectorAll('#phases .chip').forEach(c=>c.setAttribute('aria-current',cur&&+c.dataset.i===cur.i?'true':'false'));
 }
 function seek(i){
@@ -667,7 +788,7 @@ async function getLandmarker(){
   if(landmarker)return landmarker;
   const vision=await import(MP_URL);
   const fileset=await vision.FilesetResolver.forVisionTasks(MP_WASM);
-  const make=delegate=>vision.PoseLandmarker.createFromOptions(fileset,{baseOptions:{modelAssetPath:MODEL_URL,delegate},runningMode:'VIDEO',numPoses:1,minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5});
+  const make=delegate=>vision.PoseLandmarker.createFromOptions(fileset,{baseOptions:{modelAssetPath:MODEL_URL,delegate},runningMode:'VIDEO',numPoses:2,minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5});
   try{landmarker=await make('GPU')}catch{landmarker=await make('CPU')}
   return landmarker;
 }
@@ -692,18 +813,19 @@ async function handleFile(file){
     const scale=Math.min(1,1280/Math.max(vw,vh));canvas.width=Math.round(vw*scale);canvas.height=Math.round(vh*scale);
     setFrame(vw/vh,true);
     const fps=30,maxSec=15,dur=Math.min(vid.duration,maxSec),n=Math.max(1,Math.floor(dur*fps));
-    const frames=[];
+    const raw=[];
     for(let i=0;i<n;i++){
       const mt=i/fps;vid.currentTime=mt;await once(vid,'seeked');
       const res=lmk.detectForVideo(vid,Math.round(mt*1000)+1);
-      const raw=res.landmarks&&res.landmarks[0];
-      frames.push({mt,t:mt,lm:raw?raw.map(p=>({x:p.x*canvas.width,y:p.y*canvas.height,v:p.visibility??1})):null});
+      raw.push({mt,poses:(res.landmarks||[]).map(lm=>lm.map(p=>({x:p.x*canvas.width,y:p.y*canvas.height,v:p.visibility??1})))});
       if(i%3===0)busy(true,`Tracking pose · frame ${i+1} of ${n}`,(i+1)/n);
     }
-    S.video={frames,name:file.name||'Your clip',cw:canvas.width,ch:canvas.height,ar:vw/vh};S.cur=0;
+    const tr=trackRider(raw,canvas.width,canvas.height,fps);
+    S.video={frames:tr.frames,name:file.name||'Your clip',cw:canvas.width,ch:canvas.height,ar:vw/vh};S.cur=0;
     busy(false);
     showVideo();
-    const tracked=`Tracked ${frames.filter(f=>f.lm).length} of ${n} frames.`;
+    const span=`${tr.frames[0].mt.toFixed(1)}–${tr.frames[tr.frames.length-1].mt.toFixed(1)} s`;
+    const tracked=tr.i0>0||tr.i1<n-1?`Rider in view ${span} of the clip; frames outside that were ignored.`:`Tracked the rider in ${tr.valid} of ${n} frames.`;
     setStatus([vid.duration>maxSec?`Analyzed the first ${maxSec} s. Trim longer clips to one ${settings.skill==='kicker'?'jump':'hop'}.`:tracked,S.A.note].filter(Boolean).join(' '));
     $('saveRow').hidden=false;$('saveName').value='';
   }catch(e){
@@ -716,7 +838,7 @@ $('fileCam').addEventListener('change',e=>{handleFile(e.target.files[0]);e.targe
 $('fileLib').addEventListener('change',e=>{handleFile(e.target.files[0]);e.target.value=''});
 
 function showVideo(){
-  S.mode='video';S.frames=S.video.frames;canvas.width=S.video.cw;canvas.height=S.video.ch;setFrame(S.video.ar,true);
+  S.mode='video';S.frames=S.video.frames;canvas.width=S.video.cw;canvas.height=S.video.ch;setFrame(S.video.ar,true);vid.hidden=!L().video;
   $('source').textContent=S.video.name;
   try{runAnalysis()}catch(e){S.A=null;throw e}
 }
@@ -737,6 +859,103 @@ document.querySelectorAll('#skills button').forEach(b=>b.addEventListener('click
   if(S.video){try{showVideo();seek(S.A.focus);setStatus(S.A.note||'');$('saveRow').hidden=false}catch(e){loadSample();setStatus(`${e.message} Showing the ${SKILLS[settings.skill].name.toLowerCase()} sample instead.`,true)}}
   else loadSample();
 }));
+
+
+// ---------- layers ----------
+function renderLayers(){
+  document.querySelectorAll('#layers button').forEach(b=>b.setAttribute('aria-pressed',L()[b.dataset.layer]?'true':'false'));
+  if(S.mode==='video')vid.hidden=!L().video;
+}
+document.querySelectorAll('#layers button').forEach(b=>b.addEventListener('click',()=>{
+  const k=b.dataset.layer;settings.layers[k]=!settings.layers[k];store.set('hoplab.settings',settings);
+  renderLayers();if(S.A)drawFrame(S.cur);
+  if(S.shots&&S.shots.length){$('kfCapture').textContent='Update key frames';$('kfCapture').classList.add('primary')}
+}));
+
+// ---------- key frames ----------
+S.shots=[];let capToken=0;
+function keyMoments(A){
+  const list=A.phases.filter(p=>p.i>=0).map(p=>({key:p.key,title:p.name,i:p.i,metrics:[]}));
+  for(const m of A.metrics){if(m.i<0||m.status==='na')continue;const hit=list.find(x=>x.i===m.i);if(hit)hit.metrics.push(m);else list.push({key:m.key,title:m.name,i:m.i,metrics:[m]})}
+  return list.sort((a,b)=>a.i-b.i);
+}
+async function frameOn(t){
+  if(Math.abs(vid.currentTime-t)>0.001){vid.currentTime=t;await once(vid,'seeked')}
+  await new Promise(r=>{let done=false;const fin=()=>{if(!done){done=true;r()}};if(vid.requestVideoFrameCallback)vid.requestVideoFrameCallback(fin);setTimeout(fin,90)});
+}
+const STATUS_COL={good:'#5fc28a',work:'#e3a93c',miss:'#f0776c'};
+function drawBand(c,mo,W,H,band){
+  const k=W/1280,pad=Math.round(24*Math.max(k,.6));
+  c.fillStyle='#16201c';c.fillRect(0,H,W,band);
+  c.fillStyle='#d9480f';c.fillRect(0,H,W,Math.max(3,Math.round(5*k)));
+  c.textBaseline='top';c.fillStyle='#ffffff';
+  const big=Math.round(band*.3);c.font=`700 ${big}px "Barlow Condensed","Arial Narrow",sans-serif`;
+  c.fillText(mo.title.toUpperCase(),pad,H+pad*.8);
+  const sm=Math.round(band*.15);c.font=`500 ${sm}px "IBM Plex Mono",ui-monospace,monospace`;
+  let y=H+pad*.8+big*1.15;
+  const lines=mo.metrics.length?mo.metrics.map(m=>[`${m.name} ${m.display}`,STATUS_COL[m.status]||'#ffffff']):[[S.A.live(mo.i),'rgba(255,255,255,.8)']];
+  for(const [txt,col] of lines.slice(0,2)){c.fillStyle=col;c.fillText(txt,pad,y);y+=sm*1.35}
+  c.textAlign='right';c.fillStyle='rgba(255,255,255,.65)';c.font=`500 ${Math.round(sm*.9)}px "IBM Plex Mono",ui-monospace,monospace`;
+  c.fillText(`${SKILLS[settings.skill].name} · ${(S.A.t[mo.i]-S.A.t[0]).toFixed(2)} s`,W-pad,H+pad*.8);
+  c.fillText('BUNNY HOP LAB',W-pad,H+pad*.8+sm*1.4);c.textAlign='left';
+}
+async function captureKeyFrames(){
+  if(!S.A||S.mode==='busy')return;
+  const tok=++capToken;pause();
+  const A=S.A,W=canvas.width,H=canvas.height,band=Math.round(Math.max(110,H*.2));
+  const off=document.createElement('canvas');off.width=W;off.height=H+band;const c=off.getContext('2d');
+  const moments=keyMoments(A),shots=[],keep=S.cur,stamp=new Date().toISOString().slice(0,10);
+  $('kfStatus').textContent='Capturing key frames…';$('kfCapture').disabled=true;
+  try{
+    for(let n=0;n<moments.length;n++){
+      const mo=moments[n];
+      if(S.mode==='video')await frameOn(S.frames[mo.i].mt);
+      if(tok!==capToken)return;
+      c.clearRect(0,0,W,H+band);
+      drawScene(c,mo.i,W,H,{videoImg:S.mode==='video'&&L().video,fillStage:true,backdrop:L().video,skeleton:L().skeleton,ref:L().ref});
+      drawBand(c,mo,W,H,band);
+      const blob=await new Promise(r=>off.toBlob(r,'image/jpeg',.9));
+      if(!blob)throw new Error('This browser could not create the image.');
+      shots.push({...mo,blob,url:URL.createObjectURL(blob),file:`hoplab-${settings.skill}-${stamp}-${String(n+1).padStart(2,'0')}-${mo.key}.jpg`});
+    }
+    for(const s of S.shots)URL.revokeObjectURL(s.url);
+    S.shots=shots;renderShots();$('kfStatus').textContent='';
+  }catch(e){$('kfStatus').textContent=e.message||String(e)}
+  finally{if(tok===capToken){$('kfCapture').disabled=false;$('kfCapture').textContent='Recapture';$('kfCapture').classList.remove('primary');seek(keep)}}
+}
+function renderShots(){
+  const g=$('kfGrid');g.innerHTML='';$('kfShare').hidden=!S.shots.length;
+  S.shots.forEach((s,idx)=>{
+    const fig=document.createElement('figure');fig.className='shot';
+    fig.innerHTML=`<button type="button" aria-label=""><img alt=""></button><figcaption><b></b><span class="when"></span></figcaption>`;
+    const btn=fig.querySelector('button');btn.setAttribute('aria-label','Open '+s.title);btn.addEventListener('click',()=>openViewer(idx));
+    const img=fig.querySelector('img');img.src=s.url;img.alt=s.title+' key frame';
+    fig.querySelector('b').textContent=s.title;fig.querySelector('.when').textContent=(S.A.t[s.i]-S.A.t[0]).toFixed(2)+' s';
+    const cap=fig.querySelector('figcaption');
+    for(const m of s.metrics){const sp=document.createElement('span');sp.className='pill '+m.status;sp.textContent=m.display;sp.title=m.name;cap.appendChild(sp)}
+    g.appendChild(fig);
+  });
+}
+async function saveFiles(list){
+  const files=list.map(s=>new File([s.blob],s.file,{type:'image/jpeg'}));
+  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files,title:'Bunny Hop Lab key frames'});return}}
+  catch(e){if(e&&e.name==='AbortError')return}
+  for(const f of files){const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+}
+let vIdx=0;
+function openViewer(idx){
+  vIdx=idx;const s=S.shots[idx];if(!s)return;
+  $('vImg').src=s.url;$('vImg').alt=s.title+' key frame';$('vCap').textContent=`${s.title} · ${idx+1} of ${S.shots.length}`;
+  const d=$('viewer');if(!d.open){if(d.showModal)d.showModal();else d.setAttribute('open','')}
+}
+function closeViewer(){const d=$('viewer');if(d.close)d.close();else d.removeAttribute('open')}
+$('kfCapture').addEventListener('click',captureKeyFrames);
+$('kfShare').addEventListener('click',()=>saveFiles(S.shots));
+$('vPrev').addEventListener('click',()=>openViewer((vIdx-1+S.shots.length)%S.shots.length));
+$('vNext').addEventListener('click',()=>openViewer((vIdx+1)%S.shots.length));
+$('vSave').addEventListener('click',()=>saveFiles([S.shots[vIdx]]));
+$('vGo').addEventListener('click',()=>{const s=S.shots[vIdx];closeViewer();pause();seek(s.i);canvas.scrollIntoView({block:'center'})});
+$('vClose').addEventListener('click',closeViewer);
 
 // ---------- saved runs ----------
 function renderSaved(){
@@ -762,6 +981,7 @@ $('saveBtn').addEventListener('click',()=>{
 
 // ---------- boot ----------
 setSkill(settings.skill);
+renderLayers();
 loadSample();
 renderSaved();
 if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{})}
