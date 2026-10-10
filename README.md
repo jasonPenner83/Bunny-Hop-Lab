@@ -1,6 +1,6 @@
 # Bunny Hop Lab
 
-Side-on bunny hop analysis that runs entirely on the phone. MediaPipe Pose Landmarker
+Side-on mountain bike skill analysis (bunny hop, kicker jump) that runs entirely on the phone. MediaPipe Pose Landmarker
 (full model) tracks the rider frame by frame; the app finds the hop phases, measures
 joint angles and heights, and names the earliest fault as the top fix.
 
@@ -27,6 +27,10 @@ cached and works with no signal.
   hips back = most rearward hip vs. ankle; leg push = max knee extension; rear lift = feet
   cross half their peak height; landing = feet back near baseline; absorb = deepest knee
   in the 0.5 s after landing.
+- Kicker jump: takeoff = peak upward foot speed (the lip); landing = sharpest stop in
+  downward foot speed after the peak; compress/pop = min/max knee angle around takeoff;
+  bike pitch is estimated from the pedal-to-bar line vs. the approach. Airtime is checked
+  against gravity to flag a wrong Clip speed setting.
 - Targets are coaching ranges, tune them in CUES / analyze() in index.html.
 
 ## Files

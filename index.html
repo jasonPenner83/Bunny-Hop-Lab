@@ -45,6 +45,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .source{margin-left:auto;font-size:12px;font-family:var(--f-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
 .wrap{max-width:720px;margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column;gap:18px}
 h2{font-family:var(--f-display);font-weight:600;font-size:20px;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.skills{display:flex;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.skills button{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:600 17px var(--f-display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer}
+.skills button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.skills button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stage{position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden}
 .frame{position:relative;width:100%;aspect-ratio:16/9;margin:0 auto;max-width:100%}
 .frame video,.frame canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -121,6 +125,10 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
 </header>
 
 <main class="wrap">
+  <div class="skills" role="tablist" aria-label="Skill" id="skills">
+    <button role="tab" data-skill="hop" aria-selected="true">Bunny hop</button>
+    <button role="tab" data-skill="kicker" aria-selected="false">Kicker jump</button>
+  </div>
   <section aria-label="Replay">
     <div class="stage">
       <div class="frame" id="frame">
@@ -152,11 +160,11 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
   <section>
     <h2>Trace</h2>
     <div class="chart" id="chart"></div>
-    <div class="legend"><span><i style="background:var(--c-knee)"></i>Knee angle</span><span><i style="background:var(--c-hip)"></i>Hip height</span><span><i style="background:var(--c-foot)"></i>Foot height (rear lift)</span></div>
+    <div class="legend"><span><i style="background:var(--c-knee)"></i>Knee angle</span><span><i style="background:var(--c-hip)"></i>Hip height</span><span><i style="background:var(--c-foot)"></i>Foot height</span></div>
   </section>
 
   <section class="card">
-    <h2>Analyze your hop</h2>
+    <h2>Analyze your riding</h2>
     <div class="actions">
       <label class="btn primary">Record a hop<input type="file" id="fileCam" accept="video/*" capture="environment"></label>
       <label class="btn">Choose a clip<input type="file" id="fileLib" accept="video/*"></label>
@@ -175,17 +183,11 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
 
   <details class="tips card">
     <summary>Filming for a clean read</summary>
-    <ul>
-      <li>Film side-on, 4–6 m from the line, with the phone level at hip height. Rider and bike stay fully in frame start to finish.</li>
-      <li>Keep the phone still. A tripod or a buddy leaning on something works; panning throws off the height numbers.</li>
-      <li>Slow-mo helps a lot. Set the clip speed above to match so timings come out in real seconds.</li>
-      <li>Trim to one hop with a second of riding before and after. Long clips take longer to track.</li>
-      <li>Daylight and a rider in contrasting clothes give the tracker the best shot.</li>
-    </ul>
+    <ul id="tips"></ul>
   </details>
 
   <section>
-    <h2>Saved hops</h2>
+    <h2>Saved runs</h2>
     <ul class="saved" id="saved"></ul>
   </section>
 
@@ -218,7 +220,7 @@ const CUES={
   landing:{bad:'Land with soft knees and elbows. Let your legs fold to soak up the impact instead of landing stiff.',none:'Landing was not in the clip.',good:'Soft landing with plenty of knee bend.'}
 };
 
-function analyze(frames,opts={}){
+function prep(frames,opts={}){
   const heightCm=opts.heightCm||178;
   const n=frames.length;
   if(n<12)throw new Error('Clip is too short. Include about a second of riding before and after the hop.');
@@ -252,6 +254,10 @@ function analyze(frames,opts={}){
   const fpsReal=(n-1)/Math.max(1e-6,t[n-1]-t[0]);
   const f=s=>Math.max(1,Math.round(s*fpsReal));
   const legCm=heightCm*0.48;
+  return{n,t,side,dir,L,legCm,P,knee,hipAng,elbow,hipH,footH,handH,hipOff,b,f};
+}
+function analyzeHop(frames,opts={}){
+  const B=prep(frames,opts);const {n,t,legCm,knee,elbow,hipH,footH,handH,hipOff,b,f}=B;
   // phases
   const peak=argMax(footH,b,n-1);
   const lift=footH[peak]>0.12;
@@ -306,15 +312,15 @@ function analyze(frames,opts={}){
    M.push({key:'tuck',name:'Tuck at the top',value:tk,display:fmtDeg(tk),meta:'Knee angle in the air · target 100° or less',status:s,cue:s==='na'?CUES.tuck.none:s==='good'?CUES.tuck.good:CUES.tuck.bad,i:tuck});}
   {const ab=absorb>=0?knee[land]-knee[absorb]:NaN;const s=st(ab,v=>v>=25,v=>v>=12);
    M.push({key:'landing',name:'Landing absorption',value:ab,display:Number.isFinite(ab)?Math.round(ab)+'°':'—',meta:'Knee bend after touchdown · target 25°+',status:s,cue:s==='na'?CUES.landing.none:s==='good'?CUES.landing.good:CUES.landing.bad,i:absorb});}
-  const order=M.filter(m=>m.status!=='na');
-  const topFix=order.find(m=>m.status==='miss')||order.find(m=>m.status==='work')||null;
-  return{n,t,side,dir,L,legCm,P,knee,hipAng,elbow,hipH,footH,handH,hipOff,phases,metrics:M,topFix,lift,
-    rearLiftCm:lift?footH[peak]*legCm:0,hipLiftCm:Math.max(...hipH)*legCm};
+  const rearLiftCm=lift?footH[peak]*legCm:0;
+  return finish({...B,phases,metrics:M,lift,rearLiftCm,focus:hipsBack,
+    summary:lift?`Rear lift about ${Math.round(rearLiftCm)} cm.`:'No rear-wheel lift detected.',
+    live:i=>`rear lift ${Math.max(0,Math.round(footH[i]*legCm))} cm`});
 }
 function fmtDeg(v){return Number.isFinite(v)?Math.round(v)+'°':'—'}
 
 // Synthetic rider for the sample run (geometry in metres, y up).
-function makeSample(){
+function makeHopSample(){
   const fps=30,dur=2.5,n=Math.round(dur*fps)+1,S=250,OX=430,OY=650;
   const ease=u=>u*u*(3-2*u);
   const kf=(t,keys)=>{if(t<=keys[0][0])return keys[0].slice(1);for(let i=1;i<keys.length;i++){if(t<=keys[i][0]){const a=keys[i-1],b=keys[i],u=ease((t-a[0])/(b[0]-a[0]));return a.slice(1).map((v,j)=>v+(b[j+1]-v)*u)}}return keys[keys.length-1].slice(1)};
@@ -351,6 +357,139 @@ function makeSample(){
   }
   return{frames,w:1280,h:720,wheelPx:.37*S,groundY:OY};
 }
+
+// ---------- Kicker jump ----------
+const KCUES={
+  compress:{shallow:'Sink into the ramp face. Bend knees and elbows as the transition pushes up on you, so you have range left to pop.',deep:'You fold so deep on the face that there is no time to extend before the lip. Compress about halfway.',good:'Good compression into the transition.'},
+  pop:{early:'You extend before you reach the lip, so the ramp does not get your push. Wait until the rear wheel is about to leave, then pop.',late:'Your push comes after the lip, which kicks the back of the bike up. Start the extension as the front wheel crests the lip.',good:'Extension lands right at the lip.'},
+  extend:{bad:'Open up fully at the lip. Push through the pedals until your legs are nearly straight to get height and a stable takeoff.',good:'Full extension off the lip.'},
+  hips:{back:'Your hips sit well behind the pedals in the air, which pushes the front wheel up. Stay centred over the bottom bracket.',forward:'Your hips drift ahead of the pedals in the air, which drops the nose. Stay centred over the bottom bracket.',good:'Centred over the bike in the air.'},
+  arms:{locked:'Arms are locked straight in the air. Keep a bend in the elbows so you can steer the bike and set it up for the landing.',cramped:'Arms are very bent in the air. Give yourself room so you can push the bars forward to match the landing.',good:'Relaxed, bent arms in the air.'},
+  attitude:{high:'The front wheel is up at touchdown, so you land rear first. Push the bars forward late in the air to match the landing.',low:'The nose is well down at touchdown. Ease off pushing the bars forward and keep your hips centred.',good:'Bike matches the landing.'},
+  landing:{bad:'Land with soft knees and elbows. Let your legs fold to soak up the impact instead of landing stiff.',none:'Landing was not in the clip.',good:'Soft landing with plenty of knee bend.'}
+};
+function analyzeKicker(frames,opts={}){
+  const B=prep(frames,opts);const {n,t,dir,L,legCm,P,knee,elbow,footH,hipOff,b,f}=B;
+  const d1=a=>a.map((_,i)=>{const lo=Math.max(0,i-1),hi=Math.min(n-1,i+1);return (a[hi]-a[lo])/Math.max(1e-6,t[hi]-t[lo])});
+  const vy=d1(footH),ay=d1(vy);
+  const peak=argMax(footH,b,n-1);
+  const rise=footH[peak]-Math.min(...footH.slice(0,peak+1));
+  if(peak>=n-2||rise<0.3)throw new Error('No jump found. Film from the side with the last few metres of approach, the lip and the landing all in frame.');
+  const takeoff=argMax(vy,Math.max(0,peak-f(0.8)),peak);
+  let land=argMax(ay,peak+1,n-1);
+  const hasLanding=land>0&&ay[land]>0&&land<n-1-f(0.1);
+  if(!hasLanding)land=-1;
+  const airEnd=hasLanding?land:n-1;
+  const compress=argMin(knee,Math.max(0,takeoff-f(0.7)),takeoff);
+  const pop=argMax(knee,compress,Math.min(n-1,takeoff+f(0.15)));
+  const absorb=hasLanding?argMin(knee,land,Math.min(n-1,land+f(0.5))):-1;
+  const pitch=P.an.map((a,i)=>Math.atan2(a.y-P.wr[i].y,(P.wr[i].x-a.x)*dir)*180/Math.PI);
+  const basePitch=median(pitch.slice(0,b));
+  const airIdx=[];for(let i=takeoff+f(0.1);i<=airEnd-f(0.1);i++)airIdx.push(i);
+  if(!airIdx.length)for(let i=takeoff;i<=airEnd;i++)airIdx.push(i);
+  const mid=airIdx[airIdx.length>>1];
+  const phases=[
+    {key:'compress',name:'Compress',i:compress},
+    {key:'pop',name:'Pop',i:pop},
+    {key:'takeoff',name:'Takeoff',i:takeoff},
+    {key:'peak',name:'Peak',i:peak},
+    {key:'land',name:'Landing',i:land},
+    {key:'absorb',name:'Absorb',i:absorb}
+  ];
+  const M=[];
+  const st=(v,good,work)=>!Number.isFinite(v)?'na':good(v)?'good':work(v)?'work':'miss';
+  {const v=knee[compress],s=st(v,x=>x>=85&&x<=125,x=>x>=75&&x<=140);
+   M.push({key:'compress',name:'Compression on the face',value:v,display:fmtDeg(v),meta:'Lowest knee angle before the lip · target 85–125°',status:s,cue:s==='good'?KCUES.compress.good:v>125?KCUES.compress.shallow:KCUES.compress.deep,i:compress});}
+  {const v=t[pop]-t[takeoff],s=st(v,x=>x>=-0.12&&x<=0.05,x=>x>=-0.2&&x<=0.1);
+   M.push({key:'pop',name:'Pop timing',value:v,display:(v>=0?'+':'')+v.toFixed(2)+' s',meta:'Full extension vs. leaving the lip · target −0.12 to +0.05 s',status:s,cue:s==='good'?KCUES.pop.good:v<0?KCUES.pop.early:KCUES.pop.late,i:pop});}
+  {const v=knee[pop],s=st(v,x=>x>=145,x=>x>=130);
+   M.push({key:'extend',name:'Extension at the lip',value:v,display:fmtDeg(v),meta:'Peak knee extension · target 145°+',status:s,cue:s==='good'?KCUES.extend.good:KCUES.extend.bad,i:pop});}
+  {const v=median(airIdx.map(i=>hipOff[i])),s=st(v,x=>x>=-0.35&&x<=0.0,x=>x>=-0.45&&x<=0.08);
+   const cm=Math.round(Math.abs(v)*legCm);
+   M.push({key:'hips',name:'Hips in the air',value:v,display:cm+' cm '+(v<0?'behind':'ahead'),meta:`Hips vs. pedals in the air · target up to ${Math.round(0.35*legCm)} cm behind`,status:s,cue:s==='good'?KCUES.hips.good:v<-0.35?KCUES.hips.back:KCUES.hips.forward,i:mid});}
+  {const v=median(airIdx.map(i=>elbow[i])),s=st(v,x=>x>=100&&x<=160,x=>x>=85&&x<=170);
+   M.push({key:'arms',name:'Arms in the air',value:v,display:fmtDeg(v),meta:'Elbow angle in the air · target 100–160°',status:s,cue:s==='good'?KCUES.arms.good:v>160?KCUES.arms.locked:KCUES.arms.cramped,i:mid});}
+  {const ii=hasLanding?Math.max(takeoff,land-f(0.05)):-1;const v=ii>=0?pitch[ii]-basePitch:NaN;const s=st(v,x=>x>=-20&&x<=5,x=>x>=-30&&x<=12);
+   M.push({key:'attitude',name:'Bike at touchdown',value:v,display:Number.isFinite(v)?(v>=0?'+':'')+Math.round(v)+'°':'—',meta:'Bar-to-pedal pitch vs. the approach · target −20° to +5° (nose level to slightly down)',status:s,cue:s==='na'?KCUES.landing.none:s==='good'?KCUES.attitude.good:v>5?KCUES.attitude.high:KCUES.attitude.low,i:ii});}
+  {const v=hasLanding?knee[land]-knee[absorb]:NaN,s=st(v,x=>x>=25,x=>x>=12);
+   M.push({key:'landing',name:'Landing absorption',value:v,display:Number.isFinite(v)?Math.round(v)+'°':'—',meta:'Knee bend after touchdown · target 25°+',status:s,cue:s==='na'?KCUES.landing.none:s==='good'?KCUES.landing.good:KCUES.landing.bad,i:absorb});}
+  const airtime=hasLanding?t[land]-t[takeoff]:NaN;
+  const heightCm=(footH[peak]-footH[takeoff])*legCm;
+  const distM=hasLanding?Math.abs(P.hip[land].x-P.hip[takeoff].x)/L*legCm/100:NaN;
+  // gravity check: flight should accelerate down at ~9.8 m/s²; a big mismatch means the clip-speed setting is off
+  let note='';
+  const gIdx=[];for(let i=takeoff+2;i<=Math.min(airEnd-2,2*peak-takeoff-2);i++)gIdx.push(i);
+  if(gIdx.length>=4){const gMeas=-median(gIdx.map(i=>ay[i]))*legCm/100;const ratio=gMeas/9.81;
+    if(ratio>0&&ratio<0.6){const k=Math.sqrt(1/ratio);const sug=[2,4,8].reduce((a,c)=>Math.abs(c-k)<Math.abs(a-k)?c:a);note=`Fall speed in the air looks about ${k.toFixed(1)}× too slow. If this is a slow-mo clip, set Clip speed to ${sug}×.`}
+    else if(ratio>1.8)note='Fall speed in the air looks too fast. Check the Clip speed setting matches how the clip was filmed.'}
+  const summary=hasLanding?`Airtime ${airtime.toFixed(2)} s · about ${(distM).toFixed(1)} m out · ${Math.round(heightCm)} cm above the lip.`:`About ${Math.round(heightCm)} cm above the lip. Landing not in the clip.`;
+  return finish({...B,phases,metrics:M,summary,note,focus:pop,
+    live:i=>(i>=takeoff&&i<=airEnd)?`air ${(t[i]-t[takeoff]).toFixed(2)} s`:`feet ${Math.round(footH[i]*legCm)} cm`});
+}
+function finish(A){const order=A.metrics.filter(m=>m.status!=='na');A.topFix=order.find(m=>m.status==='miss')||order.find(m=>m.status==='work')||null;return A}
+
+function sampleKit(){
+  const ease=u=>u*u*(3-2*u);
+  const kf=(t,keys)=>{if(t<=keys[0][0])return keys[0].slice(1);for(let i=1;i<keys.length;i++){if(t<=keys[i][0]){const a=keys[i-1],b=keys[i],u=ease((t-a[0])/(b[0]-a[0]));return a.slice(1).map((v,j)=>v+(b[j+1]-v)*u)}}return keys[keys.length-1].slice(1)};
+  const rot=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),y:p.x*Math.sin(a)+p.y*Math.cos(a)});
+  const ik=(a,b,la,lb,pick)=>{const D=dist(a,b),d=Math.min(D,la+lb-1e-4),ux=(b.x-a.x)/D,uy=(b.y-a.y)/D;const x=(la*la-lb*lb+d*d)/(2*d),h=Math.sqrt(Math.max(0,la*la-x*x));const c1={x:a.x+ux*x-uy*h,y:a.y+uy*x+ux*h},c2={x:a.x+ux*x+uy*h,y:a.y+uy*x-ux*h};return pick(c1,c2)};
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed/2147483647-.5)*2.4};
+  // rider on a bike: rear axle position R, pitch a (rad), hip offset from BB (hx,hy), arm reach d; all metres
+  const pose=(R,a,hx,hy,d,S,OX,OY)=>{
+    const W=p=>{const r=rot(p,a);return{x:R.x+r.x,y:R.y+r.y}};
+    const bike={rear:W({x:0,y:0}),front:W({x:1.22,y:0}),bb:W({x:.43,y:-.03}),grip:W({x:1.05,y:.68}),seat:W({x:.30,y:.52}),htTop:W({x:1.0,y:.55}),htBot:W({x:1.06,y:.32})};
+    const ankle={x:bike.bb.x+.10,y:bike.bb.y+.06},hip={x:bike.bb.x+hx,y:bike.bb.y+hy};
+    const knee=ik(hip,ankle,.45,.45,(p,q)=>p.x>q.x?p:q);
+    const sh=ik(hip,bike.grip,.55,d,(p,q)=>p.y>q.y?p:q);
+    const el=ik(sh,bike.grip,.30,.28,(p,q)=>p.y<q.y?p:q);
+    const tl=dist(hip,sh),ux=(sh.x-hip.x)/tl,uy=(sh.y-hip.y)/tl;
+    const nose={x:sh.x+ux*.2+.1,y:sh.y+uy*.2},foot={x:ankle.x+.15,y:ankle.y-.05};
+    const px=p=>({x:OX+p.x*S+rnd(),y:OY-p.y*S+rnd()});
+    const lm=Array.from({length:33},()=>({x:0,y:0,v:0}));
+    const set=(idx,p,v)=>{const q=px(p);lm[idx]={x:q.x,y:q.y,v}};
+    set(0,nose,.99);
+    const near={11:sh,13:el,15:bike.grip,23:hip,25:knee,27:ankle,31:foot};
+    for(const k in near){set(+k,near[k],.95);set(+k+1,{x:near[k].x-.02,y:near[k].y},.55)}
+    const bikePx={};for(const k in bike)bikePx[k]={x:OX+bike[k].x*S,y:OY-bike[k].y*S};
+    return{lm,bike:bikePx};
+  };
+  return{ease,kf,pose};
+}
+function makeKickerSample(){
+  const {kf,ease,pose}=sampleKit();
+  const fps=30,dur=2.3,n=Math.round(dur*fps)+1,S=135,OX=40,OY=610;
+  const r=.37,wb=1.22,v=3.2,rampX=2.0,lipX=3.2,h=.5;
+  const terr=x=>x>=rampX&&x<=lipX?h*((x-rampX)/(lipX-rampX))**2:0;
+  const lipAng=Math.atan(2*h/(lipX-rampX));
+  const x0=0.2,t0=(lipX-x0)/v,vy0=v*Math.tan(lipAng),y0=h+r,g=9.81;
+  const tau=(vy0+Math.sqrt(vy0*vy0+2*g*(y0-r)))/g,t1=t0+tau,landAng=-6*Math.PI/180;
+  const hipK=[[0,-.15,.80],[.45,-.15,.80],[.62,-.12,.68],[.82,-.10,.64],[.88,-.02,.93],[1.10,-.42,.68],[1.40,-.40,.70],[1.56,-.15,.80],[1.64,-.12,.78],[1.82,-.08,.58],[2.15,-.15,.80],[2.3,-.15,.80]];
+  const armK=[[0,.50],[.45,.50],[.82,.44],[.94,.50],[1.10,.47],[1.45,.47],[1.60,.50],[1.82,.44],[2.15,.50]];
+  const frames=[];
+  for(let i=0;i<n;i++){
+    const t=i/fps,xr=x0+v*t;let R,a;
+    if(t<t0){
+      R={x:xr,y:terr(xr)+r};
+      // front axle follows the ramp, then the lip's tangent line once it has left the lip
+      const fy=x=>x>lipX?h+Math.tan(lipAng)*(x-lipX):terr(x);
+      a=0;for(let k=0;k<8;k++){const xf=xr+wb*Math.cos(a);a=Math.atan2(fy(xf)+r-R.y,xf-xr)}
+    }else if(t<t1){
+      const s=t-t0;R={x:xr,y:y0+vy0*s-g/2*s*s};a=lipAng+(landAng-lipAng)*ease(Math.min(1,s/tau));
+    }else{R={x:xr,y:r};a=landAng*(1-ease(Math.min(1,(t-t1)/0.15)))}
+    const [hx,hy]=kf(t,hipK),[d]=kf(t,armK);
+    const p=pose(R,a,hx,hy,d,S,OX,OY);
+    frames.push({t,mt:t,lm:p.lm,bike:p.bike});
+  }
+  const terrain=[];for(let x=-0.3;x<=9.8;x+=0.05)terrain.push({x:OX+x*S,y:OY-terr(x)*S});
+  return{frames,w:1280,h:720,wheelPx:r*S,groundY:OY,terrain,scale:S/250};
+}
+
+const SKILLS={
+  hop:{name:'Bunny hop',analyze:(f,o)=>analyzeHop(f,o),sample:()=>makeHopSample(),
+    tips:['Film side-on, 4–6 m from the line, with the phone level at hip height. Rider and bike stay fully in frame start to finish.','Keep the phone still. A tripod or a buddy leaning on something works; panning throws off the height numbers.','Slow-mo helps a lot. Set the clip speed above to match so timings come out in real seconds.','Trim to one hop with a second of riding before and after. Long clips take longer to track.','Daylight and a rider in contrasting clothes give the tracker the best shot.']},
+  kicker:{name:'Kicker jump',analyze:(f,o)=>analyzeKicker(f,o),sample:()=>makeKickerSample(),
+    tips:['Stand off to the side, level with the lip, far enough back that the last 2–3 m of approach, the lip and the landing all fit in frame.','Shoot landscape and keep the phone still. The app measures height and airtime against a fixed frame, so panning breaks them.','Hold the phone at about lip height. Shooting from far below or above skews the bike-angle read.','Slow-mo is great for the pop. Set Clip speed to match; the app checks airtime against gravity and flags a mismatch.','Trim to one jump. Start just before the ramp and end a second after landing.']}
+};
 // ==END ANALYSIS==
 
 const $=id=>document.getElementById(id);
@@ -362,15 +501,16 @@ let S={mode:'sample',frames:[],A:null,cur:0,playing:false,sample:null,videoW:128
 
 // settings
 const settings=store.get('hoplab.settings',{height:178,slowmo:'1',side:'auto'});
+if(!SKILLS[settings.skill])settings.skill='hop';
 $('height').value=settings.height;$('slowmo').value=settings.slowmo;$('side').value=settings.side;
-for(const id of ['height','slowmo','side'])$(id).addEventListener('change',()=>{settings.height=+$('height').value||178;settings.slowmo=$('slowmo').value;settings.side=$('side').value;store.set('hoplab.settings',settings);if(S.frames.length&&S.mode!=='busy'){try{runAnalysis();}catch(e){setStatus(e.message,true)}}});
+for(const id of ['height','slowmo','side'])$(id).addEventListener('change',()=>{settings.height=+$('height').value||178;settings.slowmo=$('slowmo').value;settings.side=$('side').value;store.set('hoplab.settings',settings);if(S.frames.length&&S.mode!=='busy'){try{runAnalysis();setStatus(S.A.note||'')}catch(e){setStatus(e.message,true)}}});
 
 function setStatus(msg,err){const el=$('status');el.textContent=msg||'';el.classList.toggle('err',!!err)}
 
 function runAnalysis(){
   const opts={heightCm:+$('height').value||178,side:$('side').value};
   if(S.mode==='video'){const k=+$('slowmo').value||1;S.frames.forEach(f=>f.t=f.mt/k)}
-  S.A=analyze(S.frames,opts);
+  S.A=SKILLS[settings.skill].analyze(S.frames,opts);
   renderAll();
 }
 
@@ -392,12 +532,12 @@ function renderPhases(){
 }
 function renderFix(){
   const el=$('fix'),A=S.A,m=A.topFix;
-  const stats=A.lift?`Rear lift about ${Math.round(A.rearLiftCm)} cm.`:'No rear-wheel lift detected.';
+  const stats=A.summary;
   if(m){el.innerHTML=`<div class="eyebrow">Top fix${S.mode==='sample'?' · sample run':''}</div><h3></h3><p class="cue"></p><p class="why"></p><button class="btn small" id="fixJump">Show me the moment</button>`;
     el.querySelector('h3').textContent=m.name+': '+m.display;el.querySelector('.cue').textContent=m.cue;
     el.querySelector('.why').textContent=`${stats} Fix the earliest fault first; it usually causes the ones after it.`;
     const j=el.querySelector('#fixJump');if(m.i>=0)j.addEventListener('click',()=>{pause();seek(m.i)});else j.remove();
-  }else{el.innerHTML=`<div class="eyebrow">Verdict${S.mode==='sample'?' · sample run':''}</div><h3>Clean hop</h3><p></p>`;el.querySelector('p').textContent=`${stats} Every phase is inside its target range. Next step: carry more speed and push harder through the legs for height.`}
+  }else{el.innerHTML=`<div class="eyebrow">Verdict${S.mode==='sample'?' · sample run':''}</div><h3>Clean ${settings.skill==='kicker'?'jump':'hop'}</h3><p></p>`;el.querySelector('p').textContent=`${stats} Every phase is inside its target range. Next step: ${settings.skill==='kicker'?'take a little more speed and work on a bigger, later pop.':'carry more speed and push harder through the legs for height.'}`}
 }
 function renderMetrics(){
   const ul=$('metrics');ul.innerHTML='';
@@ -449,10 +589,11 @@ function drawFrame(i){
     const gy=S.sample.groundY;
     ctx.fillStyle=css('--stage-dim');ctx.globalAlpha=.25;ctx.fillRect(0,gy,W,H-gy);ctx.globalAlpha=1;
     ctx.strokeStyle=css('--stage-dim');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();
-    const b=S.frames[i].bike,r=S.sample.wheelPx;
-    ctx.lineWidth=5;ctx.strokeStyle=css('--stage-dim');
+    if(S.sample.terrain){const T=S.sample.terrain;ctx.fillStyle=css('--stage-dim');ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(T[0].x,gy);for(const q of T)ctx.lineTo(q.x,q.y);ctx.lineTo(T[T.length-1].x,gy);ctx.closePath();ctx.fill();ctx.globalAlpha=1}
+    const b=S.frames[i].bike,r=S.sample.wheelPx,bs=S.sample.scale||1;
+    ctx.lineWidth=5*bs;ctx.strokeStyle=css('--stage-dim');
     for(const w of [b.rear,b.front]){ctx.beginPath();ctx.arc(w.x,w.y,r,0,Math.PI*2);ctx.stroke()}
-    ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+    ctx.lineWidth=7*bs;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
     ctx.moveTo(b.rear.x,b.rear.y);ctx.lineTo(b.bb.x,b.bb.y);ctx.lineTo(b.htBot.x,b.htBot.y);ctx.lineTo(b.htTop.x,b.htTop.y);ctx.lineTo(b.seat.x,b.seat.y);ctx.lineTo(b.bb.x,b.bb.y);
     ctx.moveTo(b.seat.x,b.seat.y);ctx.lineTo(b.rear.x,b.rear.y);ctx.moveTo(b.htBot.x,b.htBot.y);ctx.lineTo(b.front.x,b.front.y);ctx.moveTo(b.htTop.x,b.htTop.y);ctx.lineTo(b.grip.x,b.grip.y);ctx.stroke();
   }else{
@@ -480,7 +621,7 @@ function drawFrame(i){
   ctx.font=`700 ${Math.round(34*k)}px "Barlow Condensed","Arial Narrow",sans-serif`;ctx.textBaseline='top';ctx.fillStyle=white;
   ctx.fillText((cur?cur.name:'Approach').toUpperCase(),20*k,18*k);
   ctx.font=`500 ${Math.round(20*k)}px "IBM Plex Mono",ui-monospace,monospace`;ctx.fillStyle='rgba(255,255,255,.75)';
-  ctx.fillText(`rear lift ${Math.max(0,Math.round(A.footH[i]*A.legCm))} cm`,20*k,58*k);
+  ctx.fillText(A.live(i),20*k,58*k);
   ctx.restore();
   // phase chips
   document.querySelectorAll('#phases .chip').forEach(c=>c.setAttribute('aria-current',cur&&+c.dataset.i===cur.i?'true':'false'));
@@ -559,31 +700,54 @@ async function handleFile(file){
       frames.push({mt,t:mt,lm:raw?raw.map(p=>({x:p.x*canvas.width,y:p.y*canvas.height,v:p.visibility??1})):null});
       if(i%3===0)busy(true,`Tracking pose · frame ${i+1} of ${n}`,(i+1)/n);
     }
-    S.mode='video';S.frames=frames;S.fileName=file.name||'Your clip';S.cur=0;
-    $('source').textContent=S.fileName;
-    runAnalysis();
+    S.video={frames,name:file.name||'Your clip',cw:canvas.width,ch:canvas.height,ar:vw/vh};S.cur=0;
     busy(false);
-    setStatus(vid.duration>maxSec?`Analyzed the first ${maxSec} s. Trim longer clips to one hop.`:`Tracked ${frames.filter(f=>f.lm).length} of ${n} frames.`);
+    showVideo();
+    const tracked=`Tracked ${frames.filter(f=>f.lm).length} of ${n} frames.`;
+    setStatus([vid.duration>maxSec?`Analyzed the first ${maxSec} s. Trim longer clips to one ${settings.skill==='kicker'?'jump':'hop'}.`:tracked,S.A.note].filter(Boolean).join(' '));
     $('saveRow').hidden=false;$('saveName').value='';
   }catch(e){
-    busy(false);S.mode=prevMode==='busy'?'sample':prevMode;
-    if(S.mode==='sample'){canvas.width=1280;canvas.height=720;setFrame(16/9,false);if(S.A)drawFrame(S.cur)}
-    setStatus(e.message||String(e),true);
+    busy(false);
+    if(S.mode==='busy'||S.mode==='video'&&!S.A)loadSample();
+    setStatus((e.message||String(e))+(S.video&&S.mode==='sample'?' Showing the sample instead; switch skills to re-check your clip.':''),true);
   }
 }
 $('fileCam').addEventListener('change',e=>{handleFile(e.target.files[0]);e.target.value=''});
 $('fileLib').addEventListener('change',e=>{handleFile(e.target.files[0]);e.target.value=''});
 
-// ---------- saved hops ----------
+function showVideo(){
+  S.mode='video';S.frames=S.video.frames;canvas.width=S.video.cw;canvas.height=S.video.ch;setFrame(S.video.ar,true);
+  $('source').textContent=S.video.name;
+  try{runAnalysis()}catch(e){S.A=null;throw e}
+}
+function loadSample(){
+  pause();S.mode='sample';S.sample=SKILLS[settings.skill].sample();S.frames=S.sample.frames;
+  canvas.width=1280;canvas.height=720;setFrame(16/9,false);
+  $('source').textContent='Sample run · '+SKILLS[settings.skill].name;$('saveRow').hidden=true;
+  runAnalysis();seek(S.A.focus);
+}
+function setSkill(key){
+  settings.skill=key;store.set('hoplab.settings',settings);
+  document.querySelectorAll('#skills button').forEach(b=>b.setAttribute('aria-selected',b.dataset.skill===key?'true':'false'));
+  const ul=$('tips');ul.innerHTML='';for(const t of SKILLS[key].tips){const li=document.createElement('li');li.textContent=t;ul.appendChild(li)}
+}
+document.querySelectorAll('#skills button').forEach(b=>b.addEventListener('click',()=>{
+  if(b.dataset.skill===settings.skill||S.mode==='busy')return;
+  pause();setSkill(b.dataset.skill);setStatus('');
+  if(S.video){try{showVideo();seek(S.A.focus);setStatus(S.A.note||'');$('saveRow').hidden=false}catch(e){loadSample();setStatus(`${e.message} Showing the ${SKILLS[settings.skill].name.toLowerCase()} sample instead.`,true)}}
+  else loadSample();
+}));
+
+// ---------- saved runs ----------
 function renderSaved(){
   const runs=store.get('hoplab.runs',[]),ul=$('saved');ul.innerHTML='';
-  if(!runs.length){ul.innerHTML='<li><p class="empty">Hops you save show up here so you can track progress over a season.</p></li>';return}
+  if(!runs.length){ul.innerHTML='<li><p class="empty">Hops and jumps you save show up here so you can track progress over a season.</p></li>';return}
   for(const r of runs){
     const li=document.createElement('li');
     li.innerHTML=`<div><div class="when"></div><div class="nums"></div><div class="nums fixline"></div></div><button class="del">Delete</button>`;
-    li.querySelector('.when').textContent=(r.name?r.name+' · ':'')+new Date(r.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
-    li.querySelector('.nums').textContent=`Lift ${r.lift} cm · preload ${r.m.preload} · legs ${r.m.legs} · arms ${r.m.arms}`;
-    li.querySelector('.fixline').textContent=r.fix?'Top fix: '+r.fix:'Clean hop';
+    li.querySelector('.when').textContent=(r.name?r.name+' · ':'')+(SKILLS[r.skill||'hop'].name)+' · '+new Date(r.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    li.querySelector('.nums').textContent=r.summary||`Lift ${r.lift} cm · preload ${r.m.preload} · legs ${r.m.legs} · arms ${r.m.arms}`;
+    li.querySelector('.fixline').textContent=r.fix?'Top fix: '+r.fix:'Every metric on target';
     li.querySelector('.del').addEventListener('click',()=>{store.set('hoplab.runs',store.get('hoplab.runs',[]).filter(x=>x.id!==r.id));renderSaved()});
     ul.appendChild(li);
   }
@@ -591,15 +755,14 @@ function renderSaved(){
 $('saveBtn').addEventListener('click',()=>{
   if(!S.A||S.mode!=='video')return;
   const m={};S.A.metrics.forEach(x=>m[x.key]=x.display);
-  const run={id:Date.now(),date:new Date().toISOString(),name:$('saveName').value.trim(),lift:Math.round(S.A.rearLiftCm),m,fix:S.A.topFix?S.A.topFix.name:''};
+  const run={id:Date.now(),date:new Date().toISOString(),skill:settings.skill,name:$('saveName').value.trim(),summary:S.A.summary,m,fix:S.A.topFix?S.A.topFix.name:''};
   const runs=[run,...store.get('hoplab.runs',[])].slice(0,50);
   if(store.set('hoplab.runs',runs)){setStatus('Saved.');$('saveRow').hidden=true;renderSaved()}else setStatus('Could not save on this device. Private browsing blocks storage.',true);
 });
 
 // ---------- boot ----------
-S.sample=makeSample();S.frames=S.sample.frames;
-runAnalysis();
-seek(S.A.phases.find(p=>p.key==='hipsBack').i);
+setSkill(settings.skill);
+loadSample();
 renderSaved();
 if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 </script>

@@ -1,7 +1,7 @@
 // Bunny Hop Lab service worker: app shell cached on install; the MediaPipe
 // library, WASM and pose model are cached the first time they load, so the
 // app works trailside with no signal after one online run.
-const VERSION = 'hoplab-v2';
+const VERSION = 'hoplab-v3';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 const RUNTIME_HOSTS = ['cdn.jsdelivr.net', 'storage.googleapis.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
