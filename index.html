@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bunny Hop Lab</title>
+<meta name="theme-color" content="#16201c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column built like a bike computer — stage, transport, phase strip, then the verdict and the numbers behind it. */
+:root{
+  --bg:#e9edea; --surface:#f7f9f7; --line:#c9d2cc; --ink:#16201c; --muted:#5b6862;
+  --accent:#d9480f; --accent-ink:#ffffff; --accent-soft:#f8dccd;
+  --good:#2f7d4f; --good-soft:#d6ecdd; --work:#a86a00; --work-soft:#f5e6c4; --miss:#b3261e; --miss-soft:#f6d6d3;
+  --stage:#1d2622; --stage-ink:#e9efe9; --stage-dim:#7c8a83; --bone:#ffffff;
+  --c-knee:#d9480f; --c-hip:#2b6cb0; --c-foot:#2f7d4f;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111816; --surface:#19221f; --line:#2c3833; --ink:#e4ebe6; --muted:#93a19a;
+  --accent:#ff7a3d; --accent-ink:#1a0d05; --accent-soft:#3a2216;
+  --good:#5fc28a; --good-soft:#18322a; --work:#e3a93c; --work-soft:#33290f; --miss:#f0776c; --miss-soft:#3b1b19;
+  --stage:#0b100e; --stage-ink:#e4ebe6; --stage-dim:#6a7872; --bone:#ffffff;
+  --c-knee:#ff7a3d; --c-hip:#6aa8ec; --c-foot:#5fc28a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111816; --surface:#19221f; --line:#2c3833; --ink:#e4ebe6; --muted:#93a19a;
+  --accent:#ff7a3d; --accent-ink:#1a0d05; --accent-soft:#3a2216;
+  --good:#5fc28a; --good-soft:#18322a; --work:#e3a93c; --work-soft:#33290f; --miss:#f0776c; --miss-soft:#3b1b19;
+  --stage:#0b100e; --stage-ink:#e4ebe6; --stage-dim:#6a7872; --bone:#ffffff;
+  --c-knee:#ff7a3d; --c-hip:#6aa8ec; --c-foot:#5fc28a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.brand span{color:var(--accent)}
+.source{margin-left:auto;font-size:12px;font-family:var(--f-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
+.wrap{max-width:720px;margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column;gap:18px}
+h2{font-family:var(--f-display);font-weight:600;font-size:20px;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.stage{position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden}
+.stage canvas{display:block;width:100%;height:auto;max-width:100%}
+.busy{position:absolute;inset:0;background:color-mix(in srgb,var(--stage) 82%,transparent);color:var(--stage-ink);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:16px;text-align:center}
+.busy .track{width:min(260px,80%);height:6px;border-radius:3px;background:var(--stage-dim);overflow:hidden}
+.busy .fill{height:100%;width:0;background:var(--accent)}
+.busy p{margin:0;font-family:var(--f-mono);font-size:13px}
+.transport{display:flex;align-items:center;gap:8px;margin-top:10px}
+.transport input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.ibtn{width:40px;height:40px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.ibtn.play{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ibtn svg{width:18px;height:18px}
+.time{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:46px;text-align:right;font-variant-numeric:tabular-nums}
+.phases{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.phases::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 10px;text-align:left;cursor:pointer;font-family:var(--f-body)}
+.chip b{display:block;font-family:var(--f-display);font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
+.chip small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.chip[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.chip:disabled{opacity:.45;cursor:default}
+.fix{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;border-left:5px solid var(--accent)}
+.fix .eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.fix h3{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.05;margin:4px 0 6px;text-wrap:balance}
+.fix p{margin:0 0 6px;max-width:62ch}
+.fix .why{font-size:13px;color:var(--muted);margin:0}
+.fix button{margin-top:8px}
+.metrics{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.m{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.m:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.m .name{font-weight:600;min-width:0}
+.m .val{font-family:var(--f-mono);font-weight:500;font-size:17px;text-align:right;font-variant-numeric:tabular-nums}
+.m .meta{font-size:13px;color:var(--muted);min-width:0}
+.m .cue{grid-column:1/-1;font-size:14px;margin:4px 0 0;max-width:62ch}
+.pill{justify-self:end;font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}.pill.work{background:var(--work-soft);color:var(--work)}.pill.miss{background:var(--miss-soft);color:var(--miss)}.pill.na{background:var(--line);color:var(--muted)}
+.chart{width:100%;cursor:crosshair;touch-action:pan-y}
+.chart svg{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:10px 14px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:600 15px var(--f-body);cursor:pointer;text-align:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:focus-within,.btn:focus-visible,.ibtn:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.btn.small{min-height:36px;font-size:14px;padding:6px 12px}
+.settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.settings label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--f-mono);min-width:0}
+.settings input,.settings select{font:500 15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;min-width:0;width:100%}
+@media (max-width:460px){.settings{grid-template-columns:1fr 1fr}.settings label:last-child{grid-column:1/-1}}
+.status{margin:12px 0 0;font-size:14px}
+.status.err{color:var(--miss)}
+.note{font-size:13px;color:var(--muted);max-width:62ch}
+details.tips summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:.04em}
+details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:62ch}
+.saved{list-style:none;margin:0;padding:0}
+.saved li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.saved .when{font-weight:600}.saved .nums{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.saved .del{background:none;border:none;color:var(--muted);cursor:pointer;font:500 13px var(--f-body);text-decoration:underline;align-self:start}
+.empty{color:var(--muted);font-size:14px;margin:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.row input{flex:1;min-width:0;font:500 15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+
+
+<header class="bar">
+  <h1 class="brand">Bunny Hop <span>Lab</span></h1>
+  <div class="source" id="source">Sample run</div>
+</header>
+
+<main class="wrap">
+  <section aria-label="Replay">
+    <div class="stage">
+      <canvas id="stage" width="1280" height="720" aria-label="Rider replay with joint tracking"></canvas>
+      <div class="busy" id="busy" hidden>
+        <p id="busyText">Loading pose model…</p>
+        <div class="track"><div class="fill" id="busyFill"></div></div>
+      </div>
+    </div>
+    <div class="transport">
+      <button class="ibtn" id="prev" aria-label="Previous frame"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+      <button class="ibtn play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M7 4v16l13-8z"/></svg></button>
+      <button class="ibtn" id="next" aria-label="Next frame"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 5h2v14h-2zM4 5v14l9-7z"/></svg></button>
+      <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Frame">
+      <span class="time" id="time">0.00s</span>
+    </div>
+    <div class="phases" id="phases" role="list"></div>
+  </section>
+
+  <section class="fix" id="fix" aria-live="polite"></section>
+
+  <section>
+    <h2>Breakdown</h2>
+    <ul class="metrics" id="metrics"></ul>
+  </section>
+
+  <section>
+    <h2>Trace</h2>
+    <div class="chart" id="chart"></div>
+    <div class="legend"><span><i style="background:var(--c-knee)"></i>Knee angle</span><span><i style="background:var(--c-hip)"></i>Hip height</span><span><i style="background:var(--c-foot)"></i>Foot height (rear lift)</span></div>
+  </section>
+
+  <section class="card">
+    <h2>Analyze your hop</h2>
+    <div class="actions">
+      <label class="btn primary">Record a hop<input type="file" id="fileCam" accept="video/*" capture="environment"></label>
+      <label class="btn">Choose a clip<input type="file" id="fileLib" accept="video/*"></label>
+    </div>
+    <div class="settings">
+      <label for="height">Rider height (cm)<input id="height" type="number" inputmode="numeric" min="120" max="215" value="178"></label>
+      <label for="slowmo">Clip speed<select id="slowmo"><option value="1">Normal</option><option value="2">Slow-mo 60 fps (2×)</option><option value="4">Slow-mo 120 fps (4×)</option><option value="8">Slow-mo 240 fps (8×)</option></select></label>
+      <label for="side">Camera side<select id="side"><option value="auto">Auto-detect</option><option value="L">Rider's left</option><option value="R">Rider's right</option></select></label>
+    </div>
+    <p class="status" id="status" role="status"></p>
+    <div class="row" id="saveRow" hidden>
+      <input id="saveName" type="text" placeholder="Name this hop (optional)" maxlength="40">
+      <button class="btn small primary" id="saveBtn">Save hop</button>
+    </div>
+  </section>
+
+  <details class="tips card">
+    <summary>Filming for a clean read</summary>
+    <ul>
+      <li>Film side-on, 4–6 m from the line, with the phone level at hip height. Rider and bike stay fully in frame start to finish.</li>
+      <li>Keep the phone still. A tripod or a buddy leaning on something works; panning throws off the height numbers.</li>
+      <li>Slow-mo helps a lot. Set the clip speed above to match so timings come out in real seconds.</li>
+      <li>Trim to one hop with a second of riding before and after. Long clips take longer to track.</li>
+      <li>Daylight and a rider in contrasting clothes give the tracker the best shot.</li>
+    </ul>
+  </details>
+
+  <section>
+    <h2>Saved hops</h2>
+    <ul class="saved" id="saved"></ul>
+  </section>
+
+  <p class="note">Targets are coaching ranges for a side-on bunny hop, not lab norms. Heights come from your foot and hip movement scaled by rider height, so treat centimetres as estimates. Pose tracking runs on your phone; clips are never uploaded.</p>
+</main>
+
+<video id="vid" playsinline muted preload="auto" hidden></video>
+
+<script type="module">
+// ==ANALYSIS==
+const SIDE={L:{sh:11,el:13,wr:15,hip:23,kn:25,an:27,ft:31},R:{sh:12,el:14,wr:16,hip:24,kn:26,an:28,ft:32}};
+const JOINTS=['sh','el','wr','hip','kn','an'];
+const median=a=>{const s=a.filter(Number.isFinite).slice().sort((x,y)=>x-y);if(!s.length)return NaN;const m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function angleAt(a,b,c){const v1x=a.x-b.x,v1y=a.y-b.y,v2x=c.x-b.x,v2y=c.y-b.y;const d=Math.hypot(v1x,v1y)*Math.hypot(v2x,v2y);if(!d)return NaN;return Math.acos(Math.max(-1,Math.min(1,(v1x*v2x+v1y*v2y)/d)))*180/Math.PI}
+function pickSide(frames){let l=0,r=0;for(const f of frames){if(!f.lm)continue;for(const k of ['el','wr','kn','an']){l+=f.lm[SIDE.L[k]]?.v||0;r+=f.lm[SIDE.R[k]]?.v||0}}return l>=r?'L':'R'}
+function rawSeries(frames,idx,minV=0.35){return frames.map(f=>{const p=f.lm&&f.lm[idx];return p&&p.v>=minV?{x:p.x,y:p.y}:null})}
+function fillGaps(arr){const known=[];arr.forEach((p,i)=>{if(p)known.push(i)});if(known.length<2)return null;const out=arr.slice();for(let i=0;i<out.length;i++){if(out[i])continue;let a=-1,b=-1;for(const k of known){if(k<i)a=k;else{b=k;break}}if(a<0)out[i]={...arr[b]};else if(b<0)out[i]={...arr[a]};else{const u=(i-a)/(b-a);out[i]={x:arr[a].x+(arr[b].x-arr[a].x)*u,y:arr[a].y+(arr[b].y-arr[a].y)*u}}}return out}
+function smooth(arr,w=2){return arr.map((_,i)=>{let sx=0,sy=0,c=0;for(let j=Math.max(0,i-w);j<=Math.min(arr.length-1,i+w);j++){sx+=arr[j].x;sy+=arr[j].y;c++}return{x:sx/c,y:sy/c}})}
+const argBy=(arr,lo,hi,cmp)=>{lo=Math.max(0,lo);hi=Math.min(arr.length-1,hi);if(hi<lo)return -1;let best=lo;for(let i=lo;i<=hi;i++)if(Number.isFinite(arr[i])&&cmp(arr[i],arr[best]))best=i;return best};
+const argMax=(a,lo,hi)=>argBy(a,lo,hi,(x,y)=>x>y||!Number.isFinite(y));
+const argMin=(a,lo,hi)=>argBy(a,lo,hi,(x,y)=>x<y||!Number.isFinite(y));
+
+const CUES={
+  preload:{shallow:'Sink lower before the lift. Bend knees and elbows together so you have range to spring from.',deep:'You are sinking so low the spring gets slow. Compress about halfway, then explode up and back.',good:'Good compression to load the hop.'},
+  hipsBack:{bad:'Drive your hips back toward the rear axle to lift the front. The front wheel comes up from the weight shift, not a pull.',good:'Strong weight shift behind the pedals.'},
+  arms:{bad:'Your arms bend as the front lifts. Keep them close to straight and let your hips do the work; pulling with bent arms caps how high the front goes.',good:'Arms stay long through the front lift.'},
+  legs:{bad:'Push the pedals hard into the ground and extend through the legs before lifting the rear. That push is where the height comes from.',good:'Full leg drive off the pedals.'},
+  sequence:{together:'Both wheels left the ground at about the same time. Get the front up first, then push and lift the rear.',late:'Long gap between front and rear. Start the leg push as the front wheel reaches its high point.',none:'Could not see the front lift start. Make sure your hands stay in frame.',good:'Front then rear, with good timing.'},
+  tuck:{bad:'Pull your knees up and push the bars forward so the bike rises to you. Your feet should come up toward your hips.',none:'No rear-wheel lift showed up in this clip.',good:'Tight tuck at the top.'},
+  landing:{bad:'Land with soft knees and elbows. Let your legs fold to soak up the impact instead of landing stiff.',none:'Landing was not in the clip.',good:'Soft landing with plenty of knee bend.'}
+};
+
+function analyze(frames,opts={}){
+  const heightCm=opts.heightCm||178;
+  const n=frames.length;
+  if(n<12)throw new Error('Clip is too short. Include about a second of riding before and after the hop.');
+  const tracked=frames.filter(f=>f.lm).length/n;
+  if(tracked<0.5)throw new Error(`The rider was only found in ${Math.round(tracked*100)}% of frames. Film side-on with the whole rider in frame.`);
+  let side=opts.side&&opts.side!=='auto'?opts.side:pickSide(frames);
+  const P={};
+  for(const k of JOINTS){
+    let s=fillGaps(rawSeries(frames,SIDE[side][k]));
+    if(!s){const other=side==='L'?'R':'L';s=fillGaps(rawSeries(frames,SIDE[other][k]))}
+    if(!s)throw new Error('Could not track the rider\'s '+({sh:'shoulder',el:'elbow',wr:'wrist',hip:'hip',kn:'knee',an:'ankle'})[k]+'. Check the rider stays in frame.');
+    P[k]=smooth(s);
+  }
+  P.nose=smooth(fillGaps(rawSeries(frames,0,0.2))||P.sh);
+  const t=frames.map(f=>f.t);
+  const L=median(P.hip.map((h,i)=>dist(h,P.kn[i])+dist(P.kn[i],P.an[i])));
+  const dir=Math.sign(median(P.nose.map((p,i)=>p.x-P.hip[i].x)))||1;
+  const b=Math.max(3,Math.round(n*0.12));
+  const base=k=>median(P[k].slice(0,b).map(p=>p.y));
+  const bHip=base('hip'),bAn=base('an'),bWr=base('wr');
+  const knee=[],hipAng=[],elbow=[],hipH=[],footH=[],handH=[],hipOff=[];
+  for(let i=0;i<n;i++){
+    knee.push(angleAt(P.hip[i],P.kn[i],P.an[i]));
+    hipAng.push(angleAt(P.sh[i],P.hip[i],P.kn[i]));
+    elbow.push(angleAt(P.sh[i],P.el[i],P.wr[i]));
+    hipH.push((bHip-P.hip[i].y)/L);
+    footH.push((bAn-P.an[i].y)/L);
+    handH.push((bWr-P.wr[i].y)/L);
+    hipOff.push((P.hip[i].x-P.an[i].x)*dir/L);
+  }
+  const fpsReal=(n-1)/Math.max(1e-6,t[n-1]-t[0]);
+  const f=s=>Math.max(1,Math.round(s*fpsReal));
+  const legCm=heightCm*0.48;
+  // phases
+  const peak=argMax(footH,b,n-1);
+  const lift=footH[peak]>0.12;
+  let takeoff=peak,land=peak;
+  if(lift){
+    const thr=Math.max(0.06,footH[peak]*0.5);
+    takeoff=peak;while(takeoff>0&&footH[takeoff-1]>=thr)takeoff--;
+    const thrLand=Math.max(0.04,footH[peak]*0.15);
+    land=peak;while(land<n-1&&footH[land+1]>=thrLand)land++;
+    if(land<n-1)land++;
+  }
+  const preload=argMin(hipH,Math.max(0,takeoff-f(1.2)),Math.max(0,takeoff-1));
+  const hipsBack=argMin(hipOff,preload,Math.max(preload,peak));
+  const push=argMax(knee,preload,Math.max(preload,peak));
+  let frontLift=-1;
+  for(let i=preload;i<=peak;i++){if(handH[i]-handH[preload]>0.15){frontLift=i;break}}
+  const tuck=lift?argMin(knee,takeoff,Math.min(n-1,land)):-1;
+  const hasLanding=lift&&land<n-1-f(0.15);
+  const absorb=hasLanding?argMin(knee,land,Math.min(n-1,land+f(0.5))):-1;
+  const phases=[
+    {key:'preload',name:'Preload',i:preload},
+    {key:'front',name:'Front lift',i:frontLift},
+    {key:'hipsBack',name:'Hips back',i:hipsBack},
+    {key:'push',name:'Leg push',i:push},
+    {key:'takeoff',name:'Rear lift',i:lift?takeoff:-1},
+    {key:'peak',name:'Peak',i:lift?peak:-1},
+    {key:'land',name:'Landing',i:hasLanding?land:-1},
+    {key:'absorb',name:'Absorb',i:absorb}
+  ];
+  // metrics
+  const M=[];
+  const st=(v,good,work)=>!Number.isFinite(v)?'na':good(v)?'good':work(v)?'work':'miss';
+  const pk=knee[preload];
+  {const s=st(pk,v=>v>=80&&v<=115,v=>v>=70&&v<=135);
+   M.push({key:'preload',name:'Preload depth',value:pk,display:fmtDeg(pk),meta:'Knee angle at the lowest point · target 80–115°',status:s,cue:s==='good'?CUES.preload.good:pk>115?CUES.preload.shallow:CUES.preload.deep,i:preload});}
+  const hb=-hipOff[hipsBack];
+  {const s=st(hb,v=>v>=0.3,v=>v>=0.15);
+   M.push({key:'hipsBack',name:'Hips back',value:hb,display:Math.round(hb*legCm)+' cm',meta:'Hips behind the pedals at full shift · target '+Math.round(0.3*legCm)+'+ cm',status:s,cue:s==='good'?CUES.hipsBack.good:CUES.hipsBack.bad,i:hipsBack});}
+  const ea=elbow[frontLift>=0?Math.round((frontLift+hipsBack)/2):hipsBack];
+  {const s=st(ea,v=>v>=150,v=>v>=130);
+   M.push({key:'arms',name:'Arms during front lift',value:ea,display:fmtDeg(ea),meta:'Elbow angle · target 150°+ (straighter is better)',status:s,cue:s==='good'?CUES.arms.good:CUES.arms.bad,i:hipsBack});}
+  const lk=knee[push];
+  {const s=st(lk,v=>v>=150,v=>v>=135);
+   M.push({key:'legs',name:'Leg drive',value:lk,display:fmtDeg(lk),meta:'Peak knee extension · target 150°+',status:s,cue:s==='good'?CUES.legs.good:CUES.legs.bad,i:push});}
+  {let gap=NaN,s='na',cue=CUES.sequence.none;
+   if(frontLift>=0&&lift){gap=t[takeoff]-t[frontLift];
+     s=gap>=0.08&&gap<=0.4?'good':(gap>=0.04&&gap<=0.55)?'work':'miss';
+     cue=s==='good'?CUES.sequence.good:gap<0.08?CUES.sequence.together:CUES.sequence.late}
+   else if(!lift){cue=CUES.tuck.none}
+   M.push({key:'sequence',name:'Front-to-rear timing',value:gap,display:Number.isFinite(gap)?gap.toFixed(2)+' s':'—',meta:'Front lift to rear lift · target 0.08–0.40 s',status:s,cue,i:lift?takeoff:-1});}
+  {const tk=tuck>=0?knee[tuck]:NaN;const s=st(tk,v=>v<=100,v=>v<=120);
+   M.push({key:'tuck',name:'Tuck at the top',value:tk,display:fmtDeg(tk),meta:'Knee angle in the air · target 100° or less',status:s,cue:s==='na'?CUES.tuck.none:s==='good'?CUES.tuck.good:CUES.tuck.bad,i:tuck});}
+  {const ab=absorb>=0?knee[land]-knee[absorb]:NaN;const s=st(ab,v=>v>=25,v=>v>=12);
+   M.push({key:'landing',name:'Landing absorption',value:ab,display:Number.isFinite(ab)?Math.round(ab)+'°':'—',meta:'Knee bend after touchdown · target 25°+',status:s,cue:s==='na'?CUES.landing.none:s==='good'?CUES.landing.good:CUES.landing.bad,i:absorb});}
+  const order=M.filter(m=>m.status!=='na');
+  const topFix=order.find(m=>m.status==='miss')||order.find(m=>m.status==='work')||null;
+  return{n,t,side,dir,L,legCm,P,knee,hipAng,elbow,hipH,footH,handH,hipOff,phases,metrics:M,topFix,lift,
+    rearLiftCm:lift?footH[peak]*legCm:0,hipLiftCm:Math.max(...hipH)*legCm};
+}
+function fmtDeg(v){return Number.isFinite(v)?Math.round(v)+'°':'—'}
+
+// Synthetic rider for the sample run (geometry in metres, y up).
+function makeSample(){
+  const fps=30,dur=2.5,n=Math.round(dur*fps)+1,S=250,OX=430,OY=650;
+  const ease=u=>u*u*(3-2*u);
+  const kf=(t,keys)=>{if(t<=keys[0][0])return keys[0].slice(1);for(let i=1;i<keys.length;i++){if(t<=keys[i][0]){const a=keys[i-1],b=keys[i],u=ease((t-a[0])/(b[0]-a[0]));return a.slice(1).map((v,j)=>v+(b[j+1]-v)*u)}}return keys[keys.length-1].slice(1)};
+  const hipK=[[0,-.08,.86],[.45,-.08,.86],[.78,-.02,.64],[1.0,-.40,.70],[1.16,-.28,.86],[1.38,-.10,.55],[1.62,-.06,.80],[1.82,-.04,.60],[2.2,-.08,.84],[2.5,-.08,.86]];
+  const armK=[[0,.50],[.45,.50],[.78,.44],[1.0,.52],[1.16,.52],[1.38,.42],[1.62,.50],[1.82,.44],[2.2,.50]];
+  const pitchK=[[0,0],[.85,0],[1.08,18],[1.3,6],[1.5,0],[2.5,0]];
+  const liftK=[[0,0],[1.1,0],[1.37,.36],[1.6,0],[2.5,0]];
+  const rot=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),y:p.x*Math.sin(a)+p.y*Math.cos(a)});
+  const ik=(a,b,la,lb,pick)=>{const d=Math.min(dist(a,b),la+lb-1e-4),ux=(b.x-a.x)/dist(a,b),uy=(b.y-a.y)/dist(a,b);const x=(la*la-lb*lb+d*d)/(2*d),h=Math.sqrt(Math.max(0,la*la-x*x));const c1={x:a.x+ux*x-uy*h,y:a.y+uy*x+ux*h},c2={x:a.x+ux*x+uy*h,y:a.y+uy*x-ux*h};return pick(c1,c2)};
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed/2147483647-.5)*2.4};
+  const frames=[];
+  for(let i=0;i<n;i++){
+    const t=i/fps;
+    const [hx,hy]=kf(t,hipK),[d]=kf(t,armK),[pd]=kf(t,pitchK),[lift]=kf(t,liftK);
+    const a=pd*Math.PI/180,R={x:0,y:.37+lift};
+    const W=p=>{const r=rot(p,a);return{x:R.x+r.x,y:R.y+r.y}};
+    const bike={rear:W({x:0,y:0}),front:W({x:1.22,y:0}),bb:W({x:.43,y:-.03}),grip:W({x:1.05,y:.68}),seat:W({x:.30,y:.52}),htTop:W({x:1.0,y:.55}),htBot:W({x:1.06,y:.32})};
+    const ankle={x:bike.bb.x+.10,y:bike.bb.y+.06};
+    const hip={x:bike.bb.x+hx,y:bike.bb.y+hy};
+    const knee=ik(hip,ankle,.45,.45,(p,q)=>p.x>q.x?p:q);
+    const sh=ik(hip,bike.grip,.55,d,(p,q)=>p.y>q.y?p:q);
+    const el=ik(sh,bike.grip,.30,.28,(p,q)=>p.y<q.y?p:q);
+    const tl=dist(hip,sh),ux=(sh.x-hip.x)/tl,uy=(sh.y-hip.y)/tl;
+    const nose={x:sh.x+ux*.2+.1,y:sh.y+uy*.2};
+    const foot={x:ankle.x+.15,y:ankle.y-.05};
+    const px=p=>({x:OX+p.x*S+rnd(),y:OY-p.y*S+rnd()});
+    const lm=Array.from({length:33},()=>({x:0,y:0,v:0}));
+    const set=(idx,p,v)=>{const q=px(p);lm[idx]={x:q.x,y:q.y,v}};
+    set(0,nose,.99);
+    const near={11:sh,13:el,15:bike.grip,23:hip,25:knee,27:ankle,31:foot};
+    for(const k in near){set(+k,near[k],.95);set(+k+1,{x:near[k].x-.02,y:near[k].y},.55)}
+    const bikePx={};for(const k in bike)bikePx[k]={x:OX+bike[k].x*S,y:OY-bike[k].y*S};
+    frames.push({t,mt:t,lm,bike:bikePx});
+  }
+  return{frames,w:1280,h:720,wheelPx:.37*S,groundY:OY};
+}
+// ==END ANALYSIS==
+
+const $=id=>document.getElementById(id);
+const canvas=$('stage'),ctx=canvas.getContext('2d'),vid=$('vid');
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+let S={mode:'sample',frames:[],A:null,cur:0,playing:false,sample:null,videoW:1280,videoH:720,fileName:'',drawToken:0};
+
+// settings
+const settings=store.get('hoplab.settings',{height:178,slowmo:'1',side:'auto'});
+$('height').value=settings.height;$('slowmo').value=settings.slowmo;$('side').value=settings.side;
+for(const id of ['height','slowmo','side'])$(id).addEventListener('change',()=>{settings.height=+$('height').value||178;settings.slowmo=$('slowmo').value;settings.side=$('side').value;store.set('hoplab.settings',settings);if(S.frames.length&&S.mode!=='busy'){try{runAnalysis();}catch(e){setStatus(e.message,true)}}});
+
+function setStatus(msg,err){const el=$('status');el.textContent=msg||'';el.classList.toggle('err',!!err)}
+
+function runAnalysis(){
+  const opts={heightCm:+$('height').value||178,side:$('side').value};
+  if(S.mode==='video'){const k=+$('slowmo').value||1;S.frames.forEach(f=>f.t=f.mt/k)}
+  S.A=analyze(S.frames,opts);
+  renderAll();
+}
+
+// ---------- rendering ----------
+function renderAll(){
+  const A=S.A;
+  $('scrub').max=A.n-1;
+  renderPhases();renderFix();renderMetrics();renderChart();
+  seek(Math.min(S.cur,A.n-1));
+}
+function renderPhases(){
+  const el=$('phases');el.innerHTML='';
+  for(const p of S.A.phases){
+    const b=document.createElement('button');b.className='chip';b.setAttribute('role','listitem');b.dataset.i=p.i;
+    b.innerHTML=`<b></b><small></small>`;b.querySelector('b').textContent=p.name;
+    b.querySelector('small').textContent=p.i>=0?(S.A.t[p.i]-S.A.t[0]).toFixed(2)+' s':'not seen';
+    b.disabled=p.i<0;b.addEventListener('click',()=>{pause();seek(p.i)});el.appendChild(b);
+  }
+}
+function renderFix(){
+  const el=$('fix'),A=S.A,m=A.topFix;
+  const stats=A.lift?`Rear lift about ${Math.round(A.rearLiftCm)} cm.`:'No rear-wheel lift detected.';
+  if(m){el.innerHTML=`<div class="eyebrow">Top fix${S.mode==='sample'?' · sample run':''}</div><h3></h3><p class="cue"></p><p class="why"></p><button class="btn small" id="fixJump">Show me the moment</button>`;
+    el.querySelector('h3').textContent=m.name+': '+m.display;el.querySelector('.cue').textContent=m.cue;
+    el.querySelector('.why').textContent=`${stats} Fix the earliest fault first; it usually causes the ones after it.`;
+    const j=el.querySelector('#fixJump');if(m.i>=0)j.addEventListener('click',()=>{pause();seek(m.i)});else j.remove();
+  }else{el.innerHTML=`<div class="eyebrow">Verdict${S.mode==='sample'?' · sample run':''}</div><h3>Clean hop</h3><p></p>`;el.querySelector('p').textContent=`${stats} Every phase is inside its target range. Next step: carry more speed and push harder through the legs for height.`}
+}
+function renderMetrics(){
+  const ul=$('metrics');ul.innerHTML='';
+  const label={good:'On target',work:'Work on',miss:'Fix',na:'Not seen'};
+  for(const m of S.A.metrics){
+    const li=document.createElement('li');li.className='m';li.tabIndex=0;
+    li.innerHTML=`<span class="name"></span><span class="val"></span><span class="meta"></span><span class="pill ${m.status}">${label[m.status]}</span><p class="cue"></p>`;
+    li.querySelector('.name').textContent=m.name;li.querySelector('.val').textContent=m.display;li.querySelector('.meta').textContent=m.meta;li.querySelector('.cue').textContent=m.cue;
+    const go=()=>{if(m.i>=0){pause();seek(m.i);canvas.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})}};
+    li.addEventListener('click',go);li.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}});
+    ul.appendChild(li);
+  }
+}
+function renderChart(){
+  const A=S.A,box=$('chart'),W=Math.max(280,box.clientWidth||600),H=250;
+  const padL=38,padR=40,top1=10,h1=96,top2=136,h2=86,t0=A.t[0],t1=A.t[A.n-1];
+  const X=t=>padL+(t-t0)/(t1-t0||1)*(W-padL-padR);
+  const kY=v=>top1+(180-v)/(180-40)*h1;
+  const cm=A.legCm;const hv=[...A.hipH,...A.footH].map(v=>v*cm);let hmax=Math.max(10,...hv),hmin=Math.min(-10,...hv);
+  const step=hmax-hmin>60?20:10;hmax=Math.ceil(hmax/step)*step;hmin=Math.floor(hmin/step)*step;
+  const hY=v=>top2+(hmax-v)/(hmax-hmin)*h2;
+  const path=(arr,Y)=>arr.map((v,i)=>(i?'L':'M')+X(A.t[i]).toFixed(1)+','+Y(v).toFixed(1)).join('');
+  let g='';
+  for(const v of [60,90,120,150,180]){g+=`<line x1="${padL}" x2="${W-padR}" y1="${kY(v)}" y2="${kY(v)}" stroke="var(--line)"/><text x="${padL-6}" y="${kY(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--f-mono)">${v}°</text>`}
+  for(let v=hmin;v<=hmax;v+=step){g+=`<line x1="${padL}" x2="${W-padR}" y1="${hY(v)}" y2="${hY(v)}" stroke="var(--line)" ${v===0?'':'stroke-dasharray="2 3"'}/><text x="${W-padR+6}" y="${hY(v)+4}" font-size="11" fill="var(--muted)" font-family="var(--f-mono)">${v}</text>`}
+  g+=`<text x="${W-padR+6}" y="${top2-6}" font-size="10" fill="var(--muted)" font-family="var(--f-mono)">cm</text>`;
+  for(const p of A.phases){if(p.i<0)continue;const x=X(A.t[p.i]);g+=`<line x1="${x}" x2="${x}" y1="${top1}" y2="${top2+h2}" stroke="var(--accent)" stroke-opacity=".35" stroke-dasharray="3 3"/>`}
+  const nt=Math.floor(t1-t0);for(let s=0;s<=nt;s+=(nt>6?2:1)){const x=X(t0+s);g+=`<text x="${x}" y="${H-4}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--f-mono)">${s}s</text>`}
+  g+=`<path d="${path(A.knee,kY)}" fill="none" stroke="var(--c-knee)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  g+=`<path d="${path(A.hipH.map(v=>v*cm),hY)}" fill="none" stroke="var(--c-hip)" stroke-width="2" stroke-linejoin="round"/>`;
+  g+=`<path d="${path(A.footH.map(v=>v*cm),hY)}" fill="none" stroke="var(--c-foot)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  g+=`<line id="cursor" x1="0" x2="0" y1="${top1}" y2="${top2+h2}" stroke="var(--ink)" stroke-width="1.5"/>`;
+  box.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Knee angle and hip and foot height over time">${g}</svg>`;
+  box._X=X;box._W=W;box._pad=[padL,padR];
+  updateCursor();
+}
+function updateCursor(){const box=$('chart'),c=box.querySelector('#cursor');if(!c||!S.A)return;const x=box._X(S.A.t[S.cur]);c.setAttribute('x1',x);c.setAttribute('x2',x)}
+function chartSeek(e){if(!S.A)return;const box=$('chart'),r=box.getBoundingClientRect(),[pl,pr]=box._pad;const u=(e.clientX-r.left-pl)/(r.width-pl-pr);const tt=S.A.t[0]+Math.max(0,Math.min(1,u))*(S.A.t[S.A.n-1]-S.A.t[0]);let best=0;S.A.t.forEach((v,i)=>{if(Math.abs(v-tt)<Math.abs(S.A.t[best]-tt))best=i});pause();seek(best)}
+$('chart').addEventListener('click',chartSeek);
+let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>S.A&&renderChart(),150)});
+
+// ---------- stage drawing ----------
+function drawFrame(i){
+  const A=S.A;if(!A)return;
+  const W=canvas.width,H=canvas.height,k=W/1280;
+  ctx.save();
+  if(S.mode==='sample'){
+    ctx.fillStyle=css('--stage');ctx.fillRect(0,0,W,H);
+    const gy=S.sample.groundY;
+    ctx.fillStyle=css('--stage-dim');ctx.globalAlpha=.25;ctx.fillRect(0,gy,W,H-gy);ctx.globalAlpha=1;
+    ctx.strokeStyle=css('--stage-dim');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();
+    const b=S.frames[i].bike,r=S.sample.wheelPx;
+    ctx.lineWidth=5;ctx.strokeStyle=css('--stage-dim');
+    for(const w of [b.rear,b.front]){ctx.beginPath();ctx.arc(w.x,w.y,r,0,Math.PI*2);ctx.stroke()}
+    ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+    ctx.moveTo(b.rear.x,b.rear.y);ctx.lineTo(b.bb.x,b.bb.y);ctx.lineTo(b.htBot.x,b.htBot.y);ctx.lineTo(b.htTop.x,b.htTop.y);ctx.lineTo(b.seat.x,b.seat.y);ctx.lineTo(b.bb.x,b.bb.y);
+    ctx.moveTo(b.seat.x,b.seat.y);ctx.lineTo(b.rear.x,b.rear.y);ctx.moveTo(b.htBot.x,b.htBot.y);ctx.lineTo(b.front.x,b.front.y);ctx.moveTo(b.htTop.x,b.htTop.y);ctx.lineTo(b.grip.x,b.grip.y);ctx.stroke();
+  }else{
+    ctx.drawImage(vid,0,0,W,H);
+    ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(0,0,W,H);
+  }
+  const P=A.P,p=key=>P[key][i];
+  const lw=Math.max(3,6*k);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  const seg=(a,b,col)=>{ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()};
+  const white='#ffffff',knee=css('--c-knee'),hip=css('--c-hip');
+  seg(p('sh'),p('hip'),white);seg(p('sh'),p('el'),white);seg(p('el'),p('wr'),white);
+  seg(p('hip'),p('kn'),knee);seg(p('kn'),p('an'),knee);
+  const head=p('nose');ctx.strokeStyle=white;ctx.lineWidth=lw*.7;ctx.beginPath();ctx.arc(head.x,head.y,22*k*(S.mode==='sample'?1.6:1),0,Math.PI*2);ctx.stroke();
+  for(const j of ['sh','el','wr','hip','kn','an']){const q=p(j);ctx.fillStyle=j==='hip'?hip:j==='kn'||j==='an'?knee:white;ctx.beginPath();ctx.arc(q.x,q.y,lw*1.1,0,Math.PI*2);ctx.fill()}
+  // angle tags
+  const tag=(pt,txt,dx,dy,col)=>{const fs=Math.round(22*k)+'px';ctx.font=`600 ${fs} "IBM Plex Mono",ui-monospace,monospace`;const w=ctx.measureText(txt).width+14*k,h=28*k,x=pt.x+dx*k,y=pt.y+dy*k;ctx.fillStyle='rgba(10,14,12,.78)';ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y-h/2,w,h,6*k):ctx.rect(x,y-h/2,w,h);ctx.fill();ctx.fillStyle=col;ctx.textBaseline='middle';ctx.fillText(txt,x+7*k,y+1)};
+  const d=A.dir;
+  tag(p('kn'),fmtDeg(A.knee[i]),d>0?18:-90,-6,knee);
+  tag(p('hip'),fmtDeg(A.hipAng[i]),d>0?-96:18,0,hip);
+  tag(p('el'),fmtDeg(A.elbow[i]),d>0?-92:18,18,white);
+  // phase label
+  let cur=null;for(const ph of A.phases){if(ph.i>=0&&ph.i<=i&&(!cur||ph.i>=cur.i))cur=ph}
+  ctx.font=`700 ${Math.round(34*k)}px "Barlow Condensed","Arial Narrow",sans-serif`;ctx.textBaseline='top';ctx.fillStyle=white;
+  ctx.fillText((cur?cur.name:'Approach').toUpperCase(),20*k,18*k);
+  ctx.font=`500 ${Math.round(20*k)}px "IBM Plex Mono",ui-monospace,monospace`;ctx.fillStyle='rgba(255,255,255,.75)';
+  ctx.fillText(`rear lift ${Math.max(0,Math.round(A.footH[i]*A.legCm))} cm`,20*k,58*k);
+  ctx.restore();
+  // phase chips
+  document.querySelectorAll('#phases .chip').forEach(c=>c.setAttribute('aria-current',cur&&+c.dataset.i===cur.i?'true':'false'));
+}
+function seek(i){
+  if(!S.A)return;i=Math.max(0,Math.min(S.A.n-1,i|0));S.cur=i;$('scrub').value=i;
+  $('time').textContent=(S.A.t[i]-S.A.t[0]).toFixed(2)+'s';updateCursor();
+  if(S.mode==='video'){const tok=++S.drawToken;const target=S.frames[i].mt;
+    if(Math.abs(vid.currentTime-target)<0.001){drawFrame(i);return}
+    vid.addEventListener('seeked',()=>{if(tok===S.drawToken)drawFrame(i)},{once:true});vid.currentTime=target;
+  }else drawFrame(i);
+}
+let raf=0,lastTs=0,playT=0;
+function setPlayIcon(){$('playIcon').innerHTML=S.playing?'<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>':'<path d="M7 4v16l13-8z"/>';$('play').setAttribute('aria-label',S.playing?'Pause':'Play')}
+function play(){if(!S.A||S.playing)return;S.playing=true;setPlayIcon();if(S.cur>=S.A.n-1)seek(0);playT=S.A.t[S.cur];lastTs=0;
+  if(S.mode==='video'){vid.playbackRate=0.5;vid.currentTime=S.frames[S.cur].mt;vid.play().catch(()=>{})}
+  raf=requestAnimationFrame(tick)}
+function pause(){if(!S.playing)return;S.playing=false;setPlayIcon();cancelAnimationFrame(raf);if(S.mode==='video')vid.pause()}
+function nearest(tt,key){const F=S.frames;let lo=0,hi=F.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(F[m][key]<=tt)lo=m;else hi=m-1}return lo}
+function tick(ts){
+  if(!S.playing)return;
+  if(S.mode==='video'){
+    const i=nearest(vid.currentTime,'mt');S.cur=i;$('scrub').value=i;$('time').textContent=(S.A.t[i]-S.A.t[0]).toFixed(2)+'s';updateCursor();drawFrame(i);
+    if(vid.ended||i>=S.A.n-1){pause();return}
+  }else{
+    if(lastTs)playT+=(ts-lastTs)/1000*0.5;lastTs=ts;
+    const i=nearest(playT,'t');if(i!==S.cur){S.cur=i;$('scrub').value=i;$('time').textContent=(S.A.t[i]-S.A.t[0]).toFixed(2)+'s';updateCursor();drawFrame(i)}
+    if(playT>=S.A.t[S.A.n-1]){pause();return}
+  }
+  raf=requestAnimationFrame(tick);
+}
+$('play').addEventListener('click',()=>S.playing?pause():play());
+$('prev').addEventListener('click',()=>{pause();seek(S.cur-1)});
+$('next').addEventListener('click',()=>{pause();seek(S.cur+1)});
+$('scrub').addEventListener('input',e=>{pause();seek(+e.target.value)});
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(S.A){renderChart();drawFrame(S.cur)}});
+
+// ---------- pose tracking ----------
+const MP_VER='0.10.14';
+const MP_URL=`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}`;
+const MP_WASM=`${MP_URL}/wasm`;
+const MODEL_URL='https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
+let landmarker=null;
+async function getLandmarker(){
+  if(landmarker)return landmarker;
+  const vision=await import(MP_URL);
+  const fileset=await vision.FilesetResolver.forVisionTasks(MP_WASM);
+  const make=delegate=>vision.PoseLandmarker.createFromOptions(fileset,{baseOptions:{modelAssetPath:MODEL_URL,delegate},runningMode:'VIDEO',numPoses:1,minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5});
+  try{landmarker=await make('GPU')}catch{landmarker=await make('CPU')}
+  return landmarker;
+}
+function busy(on,text,frac){$('busy').hidden=!on;if(text)$('busyText').textContent=text;if(frac!=null)$('busyFill').style.width=Math.round(frac*100)+'%'}
+const once=(el,ev)=>new Promise((res,rej)=>{const ok=()=>{cleanup();res()},bad=()=>{cleanup();rej(new Error('This video format could not be opened. Try exporting it as MP4.'))};const cleanup=()=>{el.removeEventListener(ev,ok);el.removeEventListener('error',bad)};el.addEventListener(ev,ok);el.addEventListener('error',bad)});
+
+async function handleFile(file){
+  if(!file)return;
+  pause();setStatus('');$('saveRow').hidden=true;
+  const prevMode=S.mode;S.mode='busy';
+  busy(true,'Loading pose model…',0);
+  try{
+    let lmk;
+    try{lmk=await getLandmarker()}catch(e){throw new Error('The pose model could not load. Check your connection and try again. (Inside the Claude app preview, video tracking is unavailable; open your hosted copy of Bunny Hop Lab instead.)')}
+    if(vid.src)URL.revokeObjectURL(vid.src);
+    vid.src=URL.createObjectURL(file);
+    await once(vid,'loadeddata');
+    try{await vid.play();vid.pause()}catch{}
+    const vw=vid.videoWidth,vh=vid.videoHeight;if(!vw)throw new Error('This video has no picture track the browser can read.');
+    const scale=Math.min(1,1280/Math.max(vw,vh));canvas.width=Math.round(vw*scale);canvas.height=Math.round(vh*scale);
+    const fps=30,maxSec=15,dur=Math.min(vid.duration,maxSec),n=Math.max(1,Math.floor(dur*fps));
+    const frames=[];
+    for(let i=0;i<n;i++){
+      const mt=i/fps;vid.currentTime=mt;await once(vid,'seeked');
+      const res=lmk.detectForVideo(vid,Math.round(mt*1000)+1);
+      const raw=res.landmarks&&res.landmarks[0];
+      frames.push({mt,t:mt,lm:raw?raw.map(p=>({x:p.x*canvas.width,y:p.y*canvas.height,v:p.visibility??1})):null});
+      if(i%3===0)busy(true,`Tracking pose · frame ${i+1} of ${n}`,(i+1)/n);
+    }
+    S.mode='video';S.frames=frames;S.fileName=file.name||'Your clip';S.cur=0;
+    $('source').textContent=S.fileName;
+    runAnalysis();
+    busy(false);
+    setStatus(vid.duration>maxSec?`Analyzed the first ${maxSec} s. Trim longer clips to one hop.`:`Tracked ${frames.filter(f=>f.lm).length} of ${n} frames.`);
+    $('saveRow').hidden=false;$('saveName').value='';
+  }catch(e){
+    busy(false);S.mode=prevMode==='busy'?'sample':prevMode;
+    if(S.mode==='sample'){canvas.width=1280;canvas.height=720;if(S.A)drawFrame(S.cur)}
+    setStatus(e.message||String(e),true);
+  }
+}
+$('fileCam').addEventListener('change',e=>{handleFile(e.target.files[0]);e.target.value=''});
+$('fileLib').addEventListener('change',e=>{handleFile(e.target.files[0]);e.target.value=''});
+
+// ---------- saved hops ----------
+function renderSaved(){
+  const runs=store.get('hoplab.runs',[]),ul=$('saved');ul.innerHTML='';
+  if(!runs.length){ul.innerHTML='<li><p class="empty">Hops you save show up here so you can track progress over a season.</p></li>';return}
+  for(const r of runs){
+    const li=document.createElement('li');
+    li.innerHTML=`<div><div class="when"></div><div class="nums"></div><div class="nums fixline"></div></div><button class="del">Delete</button>`;
+    li.querySelector('.when').textContent=(r.name?r.name+' · ':'')+new Date(r.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    li.querySelector('.nums').textContent=`Lift ${r.lift} cm · preload ${r.m.preload} · legs ${r.m.legs} · arms ${r.m.arms}`;
+    li.querySelector('.fixline').textContent=r.fix?'Top fix: '+r.fix:'Clean hop';
+    li.querySelector('.del').addEventListener('click',()=>{store.set('hoplab.runs',store.get('hoplab.runs',[]).filter(x=>x.id!==r.id));renderSaved()});
+    ul.appendChild(li);
+  }
+}
+$('saveBtn').addEventListener('click',()=>{
+  if(!S.A||S.mode!=='video')return;
+  const m={};S.A.metrics.forEach(x=>m[x.key]=x.display);
+  const run={id:Date.now(),date:new Date().toISOString(),name:$('saveName').value.trim(),lift:Math.round(S.A.rearLiftCm),m,fix:S.A.topFix?S.A.topFix.name:''};
+  const runs=[run,...store.get('hoplab.runs',[])].slice(0,50);
+  if(store.set('hoplab.runs',runs)){setStatus('Saved.');$('saveRow').hidden=true;renderSaved()}else setStatus('Could not save on this device. Private browsing blocks storage.',true);
+});
+
+// ---------- boot ----------
+S.sample=makeSample();S.frames=S.sample.frames;
+runAnalysis();
+seek(S.A.phases.find(p=>p.key==='hipsBack').i);
+renderSaved();
+if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+
+</body>
+</html>
