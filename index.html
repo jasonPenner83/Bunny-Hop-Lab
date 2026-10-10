@@ -90,6 +90,33 @@ h2{font-family:var(--f-display);font-weight:600;font-size:20px;text-transform:up
 .tune .joints span{margin-right:auto;font-size:14px}
 .tune .warn{color:var(--work);font-size:14px;margin:8px 0 0}
 .tune .warn:empty{display:none}
+.theatre-only{display:none!important}
+.frame{width:min(100%, calc(70vh * var(--ar,1.7778)))}
+body.theatre{overflow:hidden}
+body.theatre .bar{display:none}
+body.theatre #replay{position:fixed;inset:0;z-index:40;background:#000;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+body.theatre .stage{width:100%;height:100%;border-radius:0;background:#000;display:flex;align-items:center;justify-content:center}
+body.theatre .frame{width:min(100%, calc((100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * var(--ar,1.7778)));outline:none}
+body.theatre .controls{position:absolute;left:0;right:0;bottom:0;padding:28px max(16px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.82) 40%);color:#fff;transition:opacity .25s}
+body.theatre #replay.idle .controls{opacity:0;pointer-events:none}
+body.theatre #replay.idle{cursor:none}
+body.theatre .theatre-only{display:inline-flex!important}
+body.theatre .controls .ibtn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff}
+body.theatre .controls .ibtn.play{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+body.theatre .controls .time{color:rgba(255,255,255,.8)}
+body.theatre .controls .layers button,body.theatre .controls .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:rgba(255,255,255,.75)}
+body.theatre .controls .layers button[aria-pressed="true"]{color:#fff;border-color:#fff}
+body.theatre .controls .chip small{color:rgba(255,255,255,.6)}
+body.theatre .controls .chip[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+body.theatre .controls .chip[aria-current="true"] small{color:var(--accent-ink)}
+body.theatre .layers .adjust,body.theatre .tune{display:none!important}
+@media (max-height:500px){body.theatre .controls .phases{display:none}body.theatre .controls .layers{margin-top:6px}}
+.sheet{width:min(520px,calc(100vw - 24px))}
+.sheet-body{padding:18px 20px 20px}
+.sheet h3{font-family:var(--f-display);font-weight:700;font-size:24px;text-transform:uppercase;letter-spacing:.03em;margin:0 0 8px}
+.sheet p{margin:0 0 10px;max-width:60ch}
+.sheet ol{margin:0 0 12px;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.sheet .btn{width:100%;margin-top:6px}
 .kf-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .kf-head h2{margin:0;margin-right:auto}
 .kf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
@@ -174,7 +201,7 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
     <button role="tab" data-skill="hop" aria-selected="true">Bunny hop</button>
     <button role="tab" data-skill="kicker" aria-selected="false">Kicker jump</button>
   </div>
-  <section aria-label="Replay">
+  <section aria-label="Replay" id="replay">
     <div class="stage">
       <div class="frame" id="frame">
         <video id="vid" playsinline webkit-playsinline muted preload="auto" hidden></video>
@@ -185,18 +212,24 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
         <div class="track"><div class="fill" id="busyFill"></div></div>
       </div>
     </div>
+    <div class="controls" id="controls">
     <div class="transport">
       <button class="ibtn" id="prev" aria-label="Previous frame"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
       <button class="ibtn play" id="play" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M7 4v16l13-8z"/></svg></button>
       <button class="ibtn" id="next" aria-label="Next frame"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 5h2v14h-2zM4 5v14l9-7z"/></svg></button>
       <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Frame">
       <span class="time" id="time">0.00s</span>
+      <button class="ibtn" id="fsBtn" aria-label="Full screen" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor"><path class="fs-in" d="M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z"/></svg></button>
     </div>
     <div class="layers" id="layers" role="group" aria-label="Show on replay">
       <button type="button" data-layer="video" aria-pressed="true"><i></i>Video</button>
       <button type="button" data-layer="skeleton" aria-pressed="true"><i style="color:var(--c-knee)"></i>Skeleton</button>
       <button type="button" data-layer="ref" aria-pressed="true"><i style="color:var(--c-ref)"></i>Reference</button>
+      <button type="button" data-layer="hud" aria-pressed="true"><i style="color:#ffffff;background:linear-gradient(90deg,var(--c-good,#5fc28a),var(--c-ref))"></i>Angles</button>
+      <button type="button" class="theatre-only" id="castBtn">Cast to TV</button>
       <button type="button" class="adjust" id="adjustBtn" aria-pressed="false" aria-controls="tune"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 17.3V20h2.7l8-8-2.7-2.7-8 8zM19.7 7a1 1 0 000-1.4l-1.3-1.3a1 1 0 00-1.4 0l-1.1 1.1 2.7 2.7L19.7 7z"/></svg>Adjust</button>
+    </div>
+    <div class="phases" id="phases" role="list"></div>
     </div>
     <div class="tune" id="tune" hidden>
       <h3>Fine-tune</h3>
@@ -205,7 +238,6 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
       <p class="warn" id="tuneWarn" role="status"></p>
       <div class="joints"><span id="jointCount">No joint fixes yet</span><button type="button" class="btn small" id="jointUndo">Undo last fix</button><button type="button" class="btn small" id="jointClear">Clear fixes</button></div>
     </div>
-    <div class="phases" id="phases" role="list"></div>
   </section>
 
   <section class="fix" id="fix" aria-live="polite"></section>
@@ -258,6 +290,20 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
     <h2>Saved runs</h2>
     <ul class="saved" id="saved"></ul>
   </section>
+
+  <dialog class="viewer sheet" id="castHelp" aria-labelledby="castTitle">
+    <div class="sheet-body">
+      <h3 id="castTitle">Show it on a TV</h3>
+      <p>Bunny Hop Lab draws the overlay on your phone, so cast by mirroring your screen. The full-screen view is laid out for a TV.</p>
+      <ol>
+        <li><b>iPhone or iPad to Apple TV or an AirPlay TV:</b> open Control Centre, tap Screen Mirroring, pick the TV.</li>
+        <li><b>Android to Chromecast or a smart TV:</b> swipe down for Quick Settings, tap Cast, Screen Cast or Smart View, pick the TV.</li>
+        <li><b>Laptop in Chrome:</b> menu (⋮), Cast, then Cast tab.</li>
+      </ol>
+      <p class="note">Turn the phone sideways for the biggest picture. Mirroring a plain video player would drop the skeleton and angles, so mirror the whole screen.</p>
+      <button class="btn primary" id="castClose">Got it</button>
+    </div>
+  </dialog>
 
   <dialog class="viewer" id="viewer" aria-label="Key frame">
     <img id="vImg" alt="">
@@ -649,7 +695,7 @@ let S={mode:'sample',frames:[],A:null,cur:0,playing:false,sample:null,videoW:128
 // settings
 const settings=store.get('hoplab.settings',{height:178,slowmo:'1',side:'auto'});
 if(!SKILLS[settings.skill])settings.skill='hop';
-settings.layers={video:true,skeleton:true,ref:true,...(settings.layers||{})};
+settings.layers={video:true,skeleton:true,ref:true,hud:true,...(settings.layers||{})};
 $('height').value=settings.height;$('slowmo').value=settings.slowmo;$('side').value=settings.side;
 for(const id of ['height','slowmo','side'])$(id).addEventListener('change',()=>{settings.height=+$('height').value||178;settings.slowmo=$('slowmo').value;settings.side=$('side').value;store.set('hoplab.settings',settings);if(S.frames.length&&S.mode!=='busy'){try{runAnalysis();setStatus(S.A.note||'')}catch(e){setStatus(e.message,true)}}});
 
@@ -731,6 +777,47 @@ $('chart').addEventListener('click',chartSeek);
 let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>S.A&&renderChart(),150)});
 
 // ---------- stage drawing ----------
+// ---------- on-screen angles vs ideal ----------
+function torsoAng(sh,hip,dir){return Math.atan2(hip.y-sh.y,(sh.x-hip.x)*dir)*180/Math.PI}
+function angleRows(i){
+  const A=S.A,P=A.P,R=S.ref&&S.ref[i];
+  const you={knee:A.knee[i],hip:A.hipAng[i],elbow:A.elbow[i],torso:torsoAng(P.sh[i],P.hip[i],A.dir)};
+  const ideal=R?{knee:angleAt(R.hip,R.kn,R.an),hip:angleAt(R.sh,R.hip,R.kn),elbow:angleAt(R.sh,R.el,R.wr),torso:torsoAng(R.sh,R.hip,A.dir)}:null;
+  return [['Knee','knee'],['Hip','hip'],['Elbow','elbow'],['Torso','torso']].map(([name,k])=>{
+    const y=you[k],id=ideal?ideal[k]:NaN,d=y-id;
+    const st=!Number.isFinite(d)?'na':Math.abs(d)<=8?'good':Math.abs(d)<=18?'work':'miss';
+    return{name,you:y,ideal:id,delta:d,st};
+  });
+}
+function drawHud(c,i,W,H,cur){
+  const A=S.A,u=Math.min(W,H)/720,rows=angleRows(i),hasRef=!!(S.ref&&S.ref[i]);
+  const ms=cur?A.metrics.filter(m=>m.i===cur.i&&m.status!=='na'):[];
+  const pad=14*u,rh=34*u,cols=hasRef?[0,104,184,264]:[0,104],bw=(hasRef?330:190)*u;
+  const mh=ms.length?(ms.length*30+14)*u:0,bh=pad*2+rh*(rows.length+1)+mh;
+  const x0=W-bw-16*u,y0=16*u;
+  c.save();c.setLineDash([]);c.shadowBlur=0;
+  c.fillStyle='rgba(10,14,12,.78)';c.beginPath();c.roundRect?c.roundRect(x0,y0,bw,bh,10*u):c.rect(x0,y0,bw,bh);c.fill();
+  c.textBaseline='middle';
+  const col=(j)=>x0+pad+cols[j]*u;
+  c.font=`600 ${Math.round(15*u)}px "IBM Plex Mono",ui-monospace,monospace`;c.fillStyle='rgba(255,255,255,.6)';
+  const hy=y0+pad+rh/2;c.fillText('JOINT',col(0),hy);c.fillText('YOU',col(1),hy);
+  if(hasRef){c.fillStyle=css('--c-ref');c.fillText('IDEAL',col(2),hy);c.fillStyle='rgba(255,255,255,.6)';c.fillText('Δ',col(3),hy)}
+  rows.forEach((r,j)=>{
+    const y=y0+pad+rh*(j+1.5);
+    c.font=`600 ${Math.round(19*u)}px "Barlow Condensed","Arial Narrow",sans-serif`;c.fillStyle='#ffffff';c.fillText(r.name.toUpperCase(),col(0),y);
+    c.font=`600 ${Math.round(19*u)}px "IBM Plex Mono",ui-monospace,monospace`;c.fillText(fmtDeg(r.you),col(1),y);
+    if(hasRef){c.fillStyle=css('--c-ref');c.fillText(fmtDeg(r.ideal),col(2),y);
+      c.fillStyle=STATUS_COL[r.st]||'#ffffff';c.fillText(Number.isFinite(r.delta)?(r.delta>0?'+':r.delta<0?'−':'±')+Math.abs(Math.round(r.delta)):'—',col(3),y)}
+  });
+  if(ms.length){
+    let y=y0+pad+rh*(rows.length+1)+8*u;
+    c.fillStyle='rgba(255,255,255,.18)';c.fillRect(x0+pad,y-4*u,bw-pad*2,1.5*u);
+    c.font=`500 ${Math.round(16*u)}px "IBM Plex Mono",ui-monospace,monospace`;
+    for(const m of ms){y+=15*u;c.fillStyle=STATUS_COL[m.status]||'#ffffff';let t=`${m.name} ${m.display}`;while(c.measureText(t).width>bw-pad*2&&t.length>8)t=t.slice(0,-2)+'…';c.fillText(t,x0+pad,y);y+=15*u}
+  }
+  c.restore();
+}
+
 const L=()=>settings.layers;
 function drawScene(c,i,W,H,o){
   const A=S.A;if(!A)return null;
@@ -780,6 +867,7 @@ function drawScene(c,i,W,H,o){
     if(o.handles){const acc=css('--accent');for(const j of EDIT_JOINTS){const q=p(j),on=dr&&dr.k===j;c.setLineDash([]);c.lineWidth=Math.max(2,3*k);c.strokeStyle='rgba(0,0,0,.6)';c.beginPath();c.arc(q.x,q.y,lw*2.6+2,0,Math.PI*2);c.stroke();c.strokeStyle=on?acc:'#ffffff';c.beginPath();c.arc(q.x,q.y,lw*2.6,0,Math.PI*2);c.stroke();if(on){c.fillStyle=acc;c.globalAlpha=.35;c.fill();c.globalAlpha=1}}}
   }
   let cur=null;for(const ph of A.phases){if(ph.i>=0&&ph.i<=i&&(!cur||ph.i>=cur.i))cur=ph}
+  if(o.hud)drawHud(c,i,W,H,cur);
   if(halo){c.shadowColor='rgba(0,0,0,.8)';c.shadowBlur=8*Math.max(1,k*2)}
   c.font=`700 ${Math.round(34*k)}px "Barlow Condensed","Arial Narrow",sans-serif`;c.textBaseline='top';c.fillStyle='#ffffff';
   c.fillText((cur?cur.name:'Approach').toUpperCase(),20*k,18*k);
@@ -790,7 +878,7 @@ function drawScene(c,i,W,H,o){
 }
 function drawFrame(i){
   if(!S.A)return;
-  const cur=drawScene(ctx,i,canvas.width,canvas.height,{backdrop:L().video,skeleton:L().skeleton||S.editing,ref:L().ref,handles:S.editing});
+  const cur=drawScene(ctx,i,canvas.width,canvas.height,{backdrop:L().video,skeleton:L().skeleton||S.editing,ref:L().ref,hud:L().hud,handles:S.editing});
   updateTuneButtons();
   document.querySelectorAll('#phases .chip').forEach(c=>c.setAttribute('aria-current',cur&&+c.dataset.i===cur.i?'true':'false'));
 }
@@ -802,10 +890,10 @@ function seek(i){
 }
 let raf=0,lastTs=0,playT=0;
 function setPlayIcon(){$('playIcon').innerHTML=S.playing?'<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>':'<path d="M7 4v16l13-8z"/>';$('play').setAttribute('aria-label',S.playing?'Pause':'Play')}
-function play(){if(!S.A||S.playing)return;S.playing=true;setPlayIcon();if(S.cur>=S.A.n-1)seek(0);playT=S.A.t[S.cur];lastTs=0;
+function play(){if(!S.A||S.playing)return;S.playing=true;setPlayIcon();setTimeout(()=>typeof poke==='function'&&poke(),0);if(S.cur>=S.A.n-1)seek(0);playT=S.A.t[S.cur];lastTs=0;
   if(S.mode==='video'){vid.playbackRate=0.5;vid.currentTime=S.frames[S.cur].mt;vid.play().catch(()=>{})}
   raf=requestAnimationFrame(tick)}
-function pause(){if(!S.playing)return;S.playing=false;setPlayIcon();cancelAnimationFrame(raf);if(S.mode==='video')vid.pause()}
+function pause(){if(!S.playing)return;S.playing=false;setPlayIcon();$('replay').classList.remove('idle');cancelAnimationFrame(raf);if(S.mode==='video')vid.pause()}
 function nearest(tt,key){const F=S.frames;let lo=0,hi=F.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(F[m][key]<=tt)lo=m;else hi=m-1}return lo}
 function tick(ts){
   if(!S.playing)return;
@@ -839,7 +927,7 @@ async function getLandmarker(){
   try{landmarker=await make('GPU')}catch{landmarker=await make('CPU')}
   return landmarker;
 }
-function setFrame(ar,showVideo){const f=$('frame');f.style.aspectRatio=String(ar);f.style.width=`min(100%, ${(70*ar).toFixed(2)}vh)`;vid.hidden=!showVideo}
+function setFrame(ar,showVideo){const f=$('frame');f.style.aspectRatio=String(ar);f.style.setProperty('--ar',ar.toFixed(4));vid.hidden=!showVideo}
 function busy(on,text,frac){$('busy').hidden=!on;if(text)$('busyText').textContent=text;if(frac!=null)$('busyFill').style.width=Math.round(frac*100)+'%'}
 const once=(el,ev)=>new Promise((res,rej)=>{const ok=()=>{cleanup();res()},bad=()=>{cleanup();rej(new Error('This video format could not be opened. Try exporting it as MP4.'))};const cleanup=()=>{el.removeEventListener(ev,ok);el.removeEventListener('error',bad)};el.addEventListener(ev,ok);el.addEventListener('error',bad)});
 
@@ -961,7 +1049,7 @@ async function captureKeyFrames(){
       if(S.mode==='video')await frameOn(S.frames[mo.i].mt);
       if(tok!==capToken)return;
       c.clearRect(0,0,W,H+band);
-      drawScene(c,mo.i,W,H,{videoImg:S.mode==='video'&&L().video,fillStage:true,backdrop:L().video,skeleton:L().skeleton,ref:L().ref});
+      drawScene(c,mo.i,W,H,{videoImg:S.mode==='video'&&L().video,fillStage:true,backdrop:L().video,skeleton:L().skeleton,ref:L().ref,hud:L().hud});
       drawBand(c,mo,W,H,band);
       const blob=await new Promise(r=>off.toBlob(r,'image/jpeg',.9));
       if(!blob)throw new Error('This browser could not create the image.');
@@ -1077,6 +1165,30 @@ const endDrag=e=>{
   applyEdits(()=>{S.edits.joints.splice(S.edits.joints.indexOf(fix),1)},`Moved the ${JOINT_NAME[d.k]}. The fix blends into the frames around it.`);
 };
 canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+
+
+// ---------- theatre (full screen) ----------
+let idleT=0;
+function poke(){const r=$('replay');r.classList.remove('idle');clearTimeout(idleT);if(document.body.classList.contains('theatre')&&S.playing)idleT=setTimeout(()=>r.classList.add('idle'),2800)}
+async function enterTheatre(){
+  if(S.editing)setEditing(false);
+  document.body.classList.add('theatre');$('fsBtn').setAttribute('aria-pressed','true');document.querySelector('#fsBtn .fs-in').setAttribute('d','M8 4h2v6H4V8h4zM14 4h2v4h4v2h-6zM4 14h6v6H8v-4H4zM14 14h6v2h-4v4h-2z');$('fsBtn').setAttribute('aria-label','Exit full screen');
+  try{if(document.documentElement.requestFullscreen&&!document.fullscreenElement)await document.documentElement.requestFullscreen({navigationUI:'hide'})}catch{}
+  try{const ar=S.mode==='video'&&S.video?S.video.ar:16/9;if(ar>1&&screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape')}catch{}
+  poke();if(S.A)drawFrame(S.cur);
+}
+function exitTheatre(){
+  document.body.classList.remove('theatre');$('replay').classList.remove('idle');clearTimeout(idleT);
+  $('fsBtn').setAttribute('aria-pressed','false');document.querySelector('#fsBtn .fs-in').setAttribute('d','M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z');$('fsBtn').setAttribute('aria-label','Full screen');
+  try{screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch{}
+  try{if(document.fullscreenElement)document.exitFullscreen()}catch{}
+}
+$('fsBtn').addEventListener('click',()=>document.body.classList.contains('theatre')?exitTheatre():enterTheatre());
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('theatre'))exitTheatre()});
+document.addEventListener('keydown',e=>{if(!document.body.classList.contains('theatre'))return;if(e.key==='Escape')exitTheatre();else if(e.key===' '){e.preventDefault();S.playing?pause():play()}else if(e.key==='ArrowRight'){pause();seek(S.cur+1)}else if(e.key==='ArrowLeft'){pause();seek(S.cur-1)}});
+for(const ev of ['pointerdown','pointermove','touchstart'])$('replay').addEventListener(ev,poke,{passive:true});
+$('castBtn').addEventListener('click',()=>{const d=$('castHelp');if(d.showModal)d.showModal();else d.setAttribute('open','')});
+$('castClose').addEventListener('click',()=>{const d=$('castHelp');if(d.close)d.close();else d.removeAttribute('open')});
 
 // ---------- saved runs ----------
 function renderSaved(){

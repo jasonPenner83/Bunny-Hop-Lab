@@ -44,6 +44,19 @@ cached and works with no signal.
   clearest detection, and only the longest stretch where the hips, knees, ankles and
   shoulders are visible and inside the frame is analyzed.
 
+## Full screen, casting and on-screen angles
+
+- The expand button next to the timer opens a full-screen theatre view (true full screen
+  and landscape lock where the browser allows; on iPhone the installed app already hides
+  the browser bars). Controls fade while playing; tap to bring them back. Esc, Space and
+  arrow keys work on a laptop.
+- Casting is screen mirroring (AirPlay / Android Cast / Chrome Cast tab), because the
+  overlay is drawn on the phone. Cast to TV shows the steps.
+- Angles layer: knee, hip, elbow and torso (from horizontal) for you vs the reference
+  rider at the matched moment, with the difference coloured (within 8° green, 18° amber,
+  else red), plus the current phase's metrics. It is drawn into the canvas, so it shows on
+  a mirrored TV and in key frames.
+
 ## Adjust mode
 
 - Tap Adjust under the replay. Scrub to a frame and tap Set here on a phase to pin it;
