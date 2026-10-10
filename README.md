@@ -44,6 +44,16 @@ cached and works with no signal.
   clearest detection, and only the longest stretch where the hips, knees, ankles and
   shoulders are visible and inside the frame is analyzed.
 
+## Adjust mode
+
+- Tap Adjust under the replay. Scrub to a frame and tap Set here on a phase to pin it;
+  Auto returns it to detection. Later phases are re-detected from pinned ones, and
+  metrics, reference timing and key frames update.
+- Drag any joint (head, shoulder, elbow, wrist, hip, knee, ankle) to fix a bad track.
+  The correction blends into the 4 frames on each side, and two nearby fixes on the
+  same joint interpolate. Undo last fix / Clear fixes.
+- Edits belong to the loaded clip (phase pins per skill) and reset when a new clip loads.
+
 ## Files
 
 index.html (whole app), manifest.webmanifest, sw.js (offline cache), icons.

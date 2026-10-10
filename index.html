@@ -69,6 +69,27 @@ h2{font-family:var(--f-display);font-weight:600;font-size:20px;text-transform:up
 .layers button[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
 .layers button[aria-pressed="true"] i{opacity:1}
 .layers button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.frame.editing canvas{touch-action:none;cursor:grab}
+.frame.editing{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.layers .adjust{margin-left:auto}
+.layers .adjust svg{width:15px;height:15px}
+.layers .adjust[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tune{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.tune h3{font-family:var(--f-display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
+.tune .note{margin:0 0 8px}
+.tune ul{list-style:none;margin:0;padding:0}
+.tune li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:8px 0;border-top:1px solid var(--line)}
+.tune .tp-name{font-weight:600;min-width:0}
+.tune .tp-time{grid-column:1;font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tune li.manual .tp-time{color:var(--accent)}
+.tune .tp-btns{grid-column:2;grid-row:1/3;display:flex;gap:6px}
+.tune .tp-btns .btn{min-height:34px;padding:4px 10px;font-size:13px}
+.tune .tp-btns .set{border-color:var(--accent);color:var(--accent)}
+.tune .tp-btns .set:disabled{opacity:.4;cursor:default}
+.tune .joints{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.tune .joints span{margin-right:auto;font-size:14px}
+.tune .warn{color:var(--work);font-size:14px;margin:8px 0 0}
+.tune .warn:empty{display:none}
 .kf-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .kf-head h2{margin:0;margin-right:auto}
 .kf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
@@ -175,6 +196,14 @@ details.tips ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:co
       <button type="button" data-layer="video" aria-pressed="true"><i></i>Video</button>
       <button type="button" data-layer="skeleton" aria-pressed="true"><i style="color:var(--c-knee)"></i>Skeleton</button>
       <button type="button" data-layer="ref" aria-pressed="true"><i style="color:var(--c-ref)"></i>Reference</button>
+      <button type="button" class="adjust" id="adjustBtn" aria-pressed="false" aria-controls="tune"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 17.3V20h2.7l8-8-2.7-2.7-8 8zM19.7 7a1 1 0 000-1.4l-1.3-1.3a1 1 0 00-1.4 0l-1.1 1.1 2.7 2.7L19.7 7z"/></svg>Adjust</button>
+    </div>
+    <div class="tune" id="tune" hidden>
+      <h3>Fine-tune</h3>
+      <p class="note">Scrub to the right frame, then tap Set here on a phase. To fix a joint the tracker missed, drag it on the replay; the fix blends into the frames around it.</p>
+      <ul id="tunePhases"></ul>
+      <p class="warn" id="tuneWarn" role="status"></p>
+      <div class="joints"><span id="jointCount">No joint fixes yet</span><button type="button" class="btn small" id="jointUndo">Undo last fix</button><button type="button" class="btn small" id="jointClear">Clear fixes</button></div>
     </div>
     <div class="phases" id="phases" role="list"></div>
   </section>
@@ -266,6 +295,18 @@ const CUES={
   landing:{bad:'Land with soft knees and elbows. Let your legs fold to soak up the impact instead of landing stiff.',none:'Landing was not in the clip.',good:'Soft landing with plenty of knee bend.'}
 };
 
+function applyJointFixes(P,fixes,n,R=4){
+  for(const k of Object.keys(P)){
+    const map=new Map();for(const j of fixes)if(j.k===k&&j.f>=0&&j.f<n)map.set(j.f,j);
+    if(!map.size)continue;
+    const keys=[...map.values()].sort((a,b)=>a.f-b.f).map(j=>({f:j.f,dx:j.x-P[k][j.f].x,dy:j.y-P[k][j.f].y}));
+    P[k]=P[k].map((p,i)=>{let a=null,b=null;for(const q of keys){if(q.f<=i)a=q;if(q.f>=i&&!b)b=q}
+      let dx=0,dy=0;
+      if(a&&b&&a!==b&&b.f-a.f<=2*R+1){const u=(i-a.f)/(b.f-a.f);dx=a.dx+(b.dx-a.dx)*u;dy=a.dy+(b.dy-a.dy)*u}
+      else{const c=[a,b].filter(Boolean).sort((x,y)=>Math.abs(x.f-i)-Math.abs(y.f-i))[0];const d=Math.abs(c.f-i);if(d<=R){const w=1-d/(R+1);dx=c.dx*w;dy=c.dy*w}}
+      return{x:p.x+dx,y:p.y+dy}});
+  }
+}
 function prep(frames,opts={}){
   const heightCm=opts.heightCm||178;
   const n=frames.length;
@@ -281,6 +322,7 @@ function prep(frames,opts={}){
     P[k]=smooth(s);
   }
   P.nose=smooth(fillGaps(rawSeries(frames,0,0.2))||P.sh);
+  if(opts.joints&&opts.joints.length)applyJointFixes(P,opts.joints,n);
   const t=frames.map(f=>f.t);
   const L=median(P.hip.map((h,i)=>dist(h,P.kn[i])+dist(P.kn[i],P.an[i])));
   const dir=Math.sign(median(P.nose.map((p,i)=>p.x-P.hip[i].x)))||1;
@@ -300,13 +342,14 @@ function prep(frames,opts={}){
   const fpsReal=(n-1)/Math.max(1e-6,t[n-1]-t[0]);
   const f=s=>Math.max(1,Math.round(s*fpsReal));
   const legCm=heightCm*0.48;
-  return{n,t,side,dir,L,legCm,P,knee,hipAng,elbow,hipH,footH,handH,hipOff,b,f};
+  const ov=k=>{const v=opts.phases&&opts.phases[k];return Number.isInteger(v)&&v>=0&&v<n?v:null};
+  return{n,t,side,dir,L,legCm,P,knee,hipAng,elbow,hipH,footH,handH,hipOff,b,f,ov};
 }
 function analyzeHop(frames,opts={}){
-  const B=prep(frames,opts);const {n,t,legCm,knee,elbow,hipH,footH,handH,hipOff,b,f}=B;
+  const B=prep(frames,opts);const {n,t,legCm,knee,elbow,hipH,footH,handH,hipOff,b,f,ov}=B;
   // phases
-  const peak=argMax(footH,b,n-1);
-  const lift=footH[peak]>0.12;
+  const peak=ov('peak')??argMax(footH,b,n-1);
+  const lift=footH[peak]>0.12||ov('takeoff')!=null||ov('peak')!=null;
   let takeoff=peak,land=peak;
   if(lift){
     const thr=Math.max(0.06,footH[peak]*0.5);
@@ -315,14 +358,15 @@ function analyzeHop(frames,opts={}){
     land=peak;while(land<n-1&&footH[land+1]>=thrLand)land++;
     if(land<n-1)land++;
   }
-  const preload=argMin(hipH,Math.max(0,takeoff-f(1.2)),Math.max(0,takeoff-1));
-  const hipsBack=argMin(hipOff,preload,Math.max(preload,peak));
-  const push=argMax(knee,preload,Math.max(preload,peak));
-  let frontLift=-1;
-  for(let i=preload;i<=peak;i++){if(handH[i]-handH[preload]>0.15){frontLift=i;break}}
+  takeoff=ov('takeoff')??takeoff;land=ov('land')??land;
+  const preload=ov('preload')??argMin(hipH,Math.max(0,takeoff-f(1.2)),Math.max(0,takeoff-1));
+  const hipsBack=ov('hipsBack')??argMin(hipOff,preload,Math.max(preload,peak));
+  const push=ov('push')??argMax(knee,preload,Math.max(preload,peak));
+  let frontLift=ov('front')??-1;
+  if(ov('front')==null)for(let i=preload;i<=peak;i++){if(handH[i]-handH[preload]>0.15){frontLift=i;break}}
   const tuck=lift?argMin(knee,takeoff,Math.min(n-1,land)):-1;
-  const hasLanding=lift&&land<n-1-f(0.15);
-  const absorb=hasLanding?argMin(knee,land,Math.min(n-1,land+f(0.5))):-1;
+  const hasLanding=lift&&(ov('land')!=null||land<n-1-f(0.15));
+  const absorb=ov('absorb')??(hasLanding?argMin(knee,land,Math.min(n-1,land+f(0.5))):-1);
   const phases=[
     {key:'preload',name:'Preload',i:preload},
     {key:'front',name:'Front lift',i:frontLift},
@@ -415,20 +459,20 @@ const KCUES={
   landing:{bad:'Land with soft knees and elbows. Let your legs fold to soak up the impact instead of landing stiff.',none:'Landing was not in the clip.',good:'Soft landing with plenty of knee bend.'}
 };
 function analyzeKicker(frames,opts={}){
-  const B=prep(frames,opts);const {n,t,dir,L,legCm,P,knee,elbow,footH,hipOff,b,f}=B;
+  const B=prep(frames,opts);const {n,t,dir,L,legCm,P,knee,elbow,footH,hipOff,b,f,ov}=B;
   const d1=a=>a.map((_,i)=>{const lo=Math.max(0,i-1),hi=Math.min(n-1,i+1);return (a[hi]-a[lo])/Math.max(1e-6,t[hi]-t[lo])});
   const vy=d1(footH),ay=d1(vy);
-  const peak=argMax(footH,b,n-1);
+  const peak=ov('peak')??argMax(footH,b,n-1);
   const rise=footH[peak]-Math.min(...footH.slice(0,peak+1));
-  if(peak>=n-2||rise<0.3)throw new Error('No jump found. Film from the side with the last few metres of approach, the lip and the landing all in frame.');
-  const takeoff=argMax(vy,Math.max(0,peak-f(0.8)),peak);
-  let land=argMax(ay,peak+1,n-1);
-  const hasLanding=land>0&&ay[land]>0&&land<n-1-f(0.1);
+  if(ov('peak')==null&&ov('takeoff')==null&&(peak>=n-2||rise<0.3))throw new Error('No jump found. Film from the side with the last few metres of approach, the lip and the landing all in frame.');
+  const takeoff=ov('takeoff')??argMax(vy,Math.max(0,peak-f(0.8)),peak);
+  let land=ov('land')??argMax(ay,peak+1,n-1);
+  const hasLanding=ov('land')!=null||(land>0&&ay[land]>0&&land<n-1-f(0.1));
   if(!hasLanding)land=-1;
   const airEnd=hasLanding?land:n-1;
-  const compress=argMin(knee,Math.max(0,takeoff-f(0.7)),takeoff);
-  const pop=argMax(knee,compress,Math.min(n-1,takeoff+f(0.15)));
-  const absorb=hasLanding?argMin(knee,land,Math.min(n-1,land+f(0.5))):-1;
+  const compress=ov('compress')??argMin(knee,Math.max(0,takeoff-f(0.7)),takeoff);
+  const pop=ov('pop')??argMax(knee,compress,Math.min(n-1,takeoff+f(0.15)));
+  const absorb=ov('absorb')??(hasLanding?argMin(knee,land,Math.min(n-1,land+f(0.5))):-1);
   const pitch=P.an.map((a,i)=>Math.atan2(a.y-P.wr[i].y,(P.wr[i].x-a.x)*dir)*180/Math.PI);
   const basePitch=median(pitch.slice(0,b));
   const airIdx=[];for(let i=takeoff+f(0.1);i<=airEnd-f(0.1);i++)airIdx.push(i);
@@ -452,7 +496,7 @@ function analyzeKicker(frames,opts={}){
    M.push({key:'extend',name:'Extension at the lip',value:v,display:fmtDeg(v),meta:'Peak knee extension · target 145°+',status:s,cue:s==='good'?KCUES.extend.good:KCUES.extend.bad,i:pop});}
   {const v=median(airIdx.map(i=>hipOff[i])),s=st(v,x=>x>=-0.35&&x<=0.0,x=>x>=-0.45&&x<=0.08);
    const cm=Math.round(Math.abs(v)*legCm);
-   M.push({key:'hips',name:'Hips in the air',value:v,display:cm+' cm '+(v<0?'behind':'ahead'),meta:`Hips vs. pedals in the air · target up to ${Math.round(0.35*legCm)} cm behind`,status:s,cue:s==='good'?KCUES.hips.good:v<-0.35?KCUES.hips.back:KCUES.hips.forward,i:mid});}
+   M.push({key:'hips',name:'Hips in the air',value:v,display:Number.isFinite(v)?cm+' cm '+(v<0?'behind':'ahead'):'—',meta:`Hips vs. pedals in the air · target up to ${Math.round(0.35*legCm)} cm behind`,status:s,cue:s==='good'?KCUES.hips.good:v<-0.35?KCUES.hips.back:KCUES.hips.forward,i:mid});}
   {const v=median(airIdx.map(i=>elbow[i])),s=st(v,x=>x>=100&&x<=160,x=>x>=85&&x<=170);
    M.push({key:'arms',name:'Arms in the air',value:v,display:fmtDeg(v),meta:'Elbow angle in the air · target 100–160°',status:s,cue:s==='good'?KCUES.arms.good:v>160?KCUES.arms.locked:KCUES.arms.cramped,i:mid});}
   {const ii=hasLanding?Math.max(takeoff,land-f(0.05)):-1;const v=ii>=0?pitch[ii]-basePitch:NaN;const s=st(v,x=>x>=-20&&x<=5,x=>x>=-30&&x<=12);
@@ -472,7 +516,7 @@ function analyzeKicker(frames,opts={}){
   return finish({...B,phases,metrics:M,summary,note,focus:pop,
     live:i=>(i>=takeoff&&i<=airEnd)?`air ${(t[i]-t[takeoff]).toFixed(2)} s`:`feet ${Math.round(footH[i]*legCm)} cm`});
 }
-function finish(A){const order=A.metrics.filter(m=>m.status!=='na');A.topFix=order.find(m=>m.status==='miss')||order.find(m=>m.status==='work')||null;return A}
+function finish(A){A.phases.forEach(p=>p.manual=A.ov(p.key)!=null);const order=A.metrics.filter(m=>m.status!=='na');A.topFix=order.find(m=>m.status==='miss')||order.find(m=>m.status==='work')||null;return A}
 
 function sampleKit(){
   const ease=u=>u*u*(3-2*u);
@@ -612,12 +656,13 @@ for(const id of ['height','slowmo','side'])$(id).addEventListener('change',()=>{
 function setStatus(msg,err){const el=$('status');el.textContent=msg||'';el.classList.toggle('err',!!err)}
 
 function runAnalysis(){
-  const opts={heightCm:+$('height').value||178,side:$('side').value};
+  const opts={heightCm:+$('height').value||178,side:$('side').value,phases:(S.edits&&S.edits.phases[settings.skill])||{},joints:(S.edits&&S.edits.joints)||[]};
   if(S.mode==='video'){const k=+$('slowmo').value||1;S.frames.forEach(f=>f.t=f.mt/k)}
   S.A=SKILLS[settings.skill].analyze(S.frames,opts);
   try{S.ref=buildRef(S.A,settings.skill)}catch{S.ref=null}
   renderAll();
-  Promise.resolve(document.fonts&&document.fonts.ready).then(()=>captureKeyFrames());
+  if(S.editing){S.kfStale=true;$('kfCapture').textContent='Update key frames';$('kfCapture').classList.add('primary')}
+  else Promise.resolve(document.fonts&&document.fonts.ready).then(()=>captureKeyFrames());
 }
 
 // ---------- rendering ----------
@@ -632,7 +677,7 @@ function renderPhases(){
   for(const p of S.A.phases){
     const b=document.createElement('button');b.className='chip';b.setAttribute('role','listitem');b.dataset.i=p.i;
     b.innerHTML=`<b></b><small></small>`;b.querySelector('b').textContent=p.name;
-    b.querySelector('small').textContent=p.i>=0?(S.A.t[p.i]-S.A.t[0]).toFixed(2)+' s':'not seen';
+    b.querySelector('small').textContent=(p.i>=0?(S.A.t[p.i]-S.A.t[0]).toFixed(2)+' s':'not seen')+(p.manual?' · set':'');
     b.disabled=p.i<0;b.addEventListener('click',()=>{pause();seek(p.i)});el.appendChild(b);
   }
 }
@@ -721,7 +766,7 @@ function drawScene(c,i,W,H,o){
     for(const j of ['sh','el','wr','hip','kn']){const q=R[j];c.fillStyle=col;c.beginPath();c.arc(q.x,q.y,lw*.75,0,Math.PI*2);c.fill()}
   }
   if(o.skeleton){
-    const P=A.P,p=key=>P[key][i];
+    const P=A.P,dr=c===ctx&&S.drag&&i===S.cur?S.drag:null,p=key=>dr&&dr.k===key?dr:P[key][i];
     const white='#ffffff',knee=css('--c-knee'),hip=css('--c-hip');
     line(p('sh'),p('hip'),white,lw);line(p('sh'),p('el'),white,lw);line(p('el'),p('wr'),white,lw);
     line(p('hip'),p('kn'),knee,lw);line(p('kn'),p('an'),knee,lw);
@@ -732,6 +777,7 @@ function drawScene(c,i,W,H,o){
     tag(p('kn'),fmtDeg(A.knee[i]),d>0?18:-90,-6,knee);
     tag(p('hip'),fmtDeg(A.hipAng[i]),d>0?-96:18,0,hip);
     tag(p('el'),fmtDeg(A.elbow[i]),d>0?-92:18,18,white);
+    if(o.handles){const acc=css('--accent');for(const j of EDIT_JOINTS){const q=p(j),on=dr&&dr.k===j;c.setLineDash([]);c.lineWidth=Math.max(2,3*k);c.strokeStyle='rgba(0,0,0,.6)';c.beginPath();c.arc(q.x,q.y,lw*2.6+2,0,Math.PI*2);c.stroke();c.strokeStyle=on?acc:'#ffffff';c.beginPath();c.arc(q.x,q.y,lw*2.6,0,Math.PI*2);c.stroke();if(on){c.fillStyle=acc;c.globalAlpha=.35;c.fill();c.globalAlpha=1}}}
   }
   let cur=null;for(const ph of A.phases){if(ph.i>=0&&ph.i<=i&&(!cur||ph.i>=cur.i))cur=ph}
   if(halo){c.shadowColor='rgba(0,0,0,.8)';c.shadowBlur=8*Math.max(1,k*2)}
@@ -744,7 +790,8 @@ function drawScene(c,i,W,H,o){
 }
 function drawFrame(i){
   if(!S.A)return;
-  const cur=drawScene(ctx,i,canvas.width,canvas.height,{backdrop:L().video,skeleton:L().skeleton,ref:L().ref});
+  const cur=drawScene(ctx,i,canvas.width,canvas.height,{backdrop:L().video,skeleton:L().skeleton||S.editing,ref:L().ref,handles:S.editing});
+  updateTuneButtons();
   document.querySelectorAll('#phases .chip').forEach(c=>c.setAttribute('aria-current',cur&&+c.dataset.i===cur.i?'true':'false'));
 }
 function seek(i){
@@ -821,6 +868,7 @@ async function handleFile(file){
       if(i%3===0)busy(true,`Tracking pose · frame ${i+1} of ${n}`,(i+1)/n);
     }
     const tr=trackRider(raw,canvas.width,canvas.height,fps);
+    S.edits=newEdits();
     S.video={frames:tr.frames,name:file.name||'Your clip',cw:canvas.width,ch:canvas.height,ar:vw/vh};S.cur=0;
     busy(false);
     showVideo();
@@ -843,7 +891,7 @@ function showVideo(){
   try{runAnalysis()}catch(e){S.A=null;throw e}
 }
 function loadSample(){
-  pause();S.mode='sample';S.sample=SKILLS[settings.skill].sample();S.frames=S.sample.frames;
+  pause();S.mode='sample';S.sample=SKILLS[settings.skill].sample();S.frames=S.sample.frames;S.edits=newEdits();
   canvas.width=1280;canvas.height=720;setFrame(16/9,false);
   $('source').textContent='Sample run · '+SKILLS[settings.skill].name;$('saveRow').hidden=true;
   runAnalysis();seek(S.A.focus);
@@ -858,6 +906,7 @@ document.querySelectorAll('#skills button').forEach(b=>b.addEventListener('click
   pause();setSkill(b.dataset.skill);setStatus('');
   if(S.video){try{showVideo();seek(S.A.focus);setStatus(S.A.note||'');$('saveRow').hidden=false}catch(e){loadSample();setStatus(`${e.message} Showing the ${SKILLS[settings.skill].name.toLowerCase()} sample instead.`,true)}}
   else loadSample();
+  if(S.editing)renderTune();
 }));
 
 
@@ -957,6 +1006,78 @@ $('vSave').addEventListener('click',()=>saveFiles([S.shots[vIdx]]));
 $('vGo').addEventListener('click',()=>{const s=S.shots[vIdx];closeViewer();pause();seek(s.i);canvas.scrollIntoView({block:'center'})});
 $('vClose').addEventListener('click',closeViewer);
 
+
+// ---------- adjust mode: phase overrides + joint fixes ----------
+const newEdits=()=>({joints:[],phases:{}});
+S.edits=newEdits();S.editing=false;S.drag=null;S.kfStale=false;
+const EDIT_JOINTS=['nose','sh','el','wr','hip','kn','an'];
+const JOINT_NAME={nose:'head',sh:'shoulder',el:'elbow',wr:'wrist',hip:'hip',kn:'knee',an:'ankle'};
+function orderWarning(A){
+  const chain=[settings.skill==='kicker'?'compress':'preload','takeoff','peak','land','absorb'];
+  const ph=chain.map(k=>A.phases.find(p=>p.key===k)).filter(p=>p&&p.i>=0);
+  for(let j=1;j<ph.length;j++)if(ph[j].i<ph[j-1].i)return `${ph[j].name} is now before ${ph[j-1].name}. Check those two phases.`;
+  return '';
+}
+function applyEdits(undo,msg){
+  const keep=S.cur;
+  try{runAnalysis();seek(keep);setStatus(msg||'')}
+  catch(e){undo&&undo();try{runAnalysis();seek(keep)}catch{}setStatus(`That change could not be applied: ${e.message}`,true)}
+  renderTune();
+}
+function renderTune(){
+  if(!S.A)return;
+  const ph=S.edits.phases[settings.skill]||(S.edits.phases[settings.skill]={});
+  const ul=$('tunePhases');ul.innerHTML='';
+  for(const p of S.A.phases){
+    const li=document.createElement('li');
+    li.innerHTML=`<span class="tp-name"></span><span class="tp-time"></span><span class="tp-btns"><button type="button" class="btn small set">Set here</button><button type="button" class="btn small">Auto</button></span>`;
+    li.querySelector('.tp-name').textContent=p.name;
+    li.querySelector('.tp-time').textContent=(p.i>=0?(S.A.t[p.i]-S.A.t[0]).toFixed(2)+' s':'not seen')+(p.manual?' · set':' · auto');
+    li.classList.toggle('manual',!!p.manual);
+    const [set,auto]=li.querySelectorAll('button');
+    set.disabled=p.i===S.cur;set.setAttribute('aria-label',`Set ${p.name} to this frame`);
+    set.addEventListener('click',()=>{const prev=ph[p.key];ph[p.key]=S.cur;applyEdits(()=>{if(prev==null)delete ph[p.key];else ph[p.key]=prev},`${p.name} set to ${(S.A.t[S.cur]-S.A.t[0]).toFixed(2)} s.`)});
+    auto.hidden=!p.manual;auto.setAttribute('aria-label',`Return ${p.name} to automatic`);
+    auto.addEventListener('click',()=>{const prev=ph[p.key];delete ph[p.key];applyEdits(()=>{ph[p.key]=prev},`${p.name} back to automatic.`)});
+    ul.appendChild(li);
+  }
+  const n=S.edits.joints.length;
+  $('jointCount').textContent=n?`${n} joint fix${n===1?'':'es'} on this clip`:'No joint fixes yet';
+  $('jointUndo').disabled=!n;$('jointClear').disabled=!n;
+  $('tuneWarn').textContent=orderWarning(S.A);
+}
+function updateTuneButtons(){if(!S.editing||!S.A)return;document.querySelectorAll('#tunePhases li').forEach((li,j)=>{const p=S.A.phases[j];if(p)li.querySelector('.set').disabled=p.i===S.cur})}
+function setEditing(on){
+  S.editing=on;pause();
+  $('adjustBtn').setAttribute('aria-pressed',on?'true':'false');
+  $('frame').classList.toggle('editing',on);$('tune').hidden=!on;
+  if(on)renderTune();
+  else if(S.kfStale){S.kfStale=false;captureKeyFrames()}
+  if(S.A)drawFrame(S.cur);
+}
+$('adjustBtn').addEventListener('click',()=>setEditing(!S.editing));
+$('jointUndo').addEventListener('click',()=>{const j=S.edits.joints.pop();if(j){if(j.f!==S.cur)seek(j.f);applyEdits(()=>S.edits.joints.push(j),`Removed the ${JOINT_NAME[j.k]} fix.`)}});
+$('jointClear').addEventListener('click',()=>{const old=S.edits.joints;S.edits.joints=[];applyEdits(()=>{S.edits.joints=old},'Joint fixes cleared.')});
+function canvasPt(e){const r=canvas.getBoundingClientRect();const s=canvas.width/r.width;return{x:(e.clientX-r.left)*s,y:(e.clientY-r.top)*s,s}}
+canvas.addEventListener('pointerdown',e=>{
+  if(!S.editing||!S.A)return;
+  pause();const q=canvasPt(e);let best=null,bd=36*q.s;
+  for(const k of EDIT_JOINTS){const p=S.A.P[k][S.cur],d=Math.hypot(p.x-q.x,p.y-q.y);if(d<bd){bd=d;best=k}}
+  if(!best)return;
+  const p=S.A.P[best][S.cur];
+  S.drag={k:best,x:p.x,y:p.y,ox:p.x-q.x,oy:p.y-q.y,x0:p.x,y0:p.y};
+  try{canvas.setPointerCapture(e.pointerId)}catch{}
+  e.preventDefault();drawFrame(S.cur);
+});
+canvas.addEventListener('pointermove',e=>{if(!S.drag)return;const q=canvasPt(e);S.drag.x=Math.max(0,Math.min(canvas.width,q.x+S.drag.ox));S.drag.y=Math.max(0,Math.min(canvas.height,q.y+S.drag.oy));e.preventDefault();drawFrame(S.cur)});
+const endDrag=e=>{
+  if(!S.drag)return;const d=S.drag;S.drag=null;
+  if(Math.hypot(d.x-d.x0,d.y-d.y0)<2){drawFrame(S.cur);return}
+  const fix={f:S.cur,k:d.k,x:d.x,y:d.y};S.edits.joints.push(fix);
+  applyEdits(()=>{S.edits.joints.splice(S.edits.joints.indexOf(fix),1)},`Moved the ${JOINT_NAME[d.k]}. The fix blends into the frames around it.`);
+};
+canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+
 // ---------- saved runs ----------
 function renderSaved(){
   const runs=store.get('hoplab.runs',[]),ul=$('saved');ul.innerHTML='';
@@ -966,7 +1087,7 @@ function renderSaved(){
     li.innerHTML=`<div><div class="when"></div><div class="nums"></div><div class="nums fixline"></div></div><button class="del">Delete</button>`;
     li.querySelector('.when').textContent=(r.name?r.name+' · ':'')+(SKILLS[r.skill||'hop'].name)+' · '+new Date(r.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
     li.querySelector('.nums').textContent=r.summary||`Lift ${r.lift} cm · preload ${r.m.preload} · legs ${r.m.legs} · arms ${r.m.arms}`;
-    li.querySelector('.fixline').textContent=r.fix?'Top fix: '+r.fix:'Every metric on target';
+    li.querySelector('.fixline').textContent=(r.fix?'Top fix: '+r.fix:'Every metric on target')+(r.adjusted?' · adjusted':'');
     li.querySelector('.del').addEventListener('click',()=>{store.set('hoplab.runs',store.get('hoplab.runs',[]).filter(x=>x.id!==r.id));renderSaved()});
     ul.appendChild(li);
   }
@@ -974,7 +1095,8 @@ function renderSaved(){
 $('saveBtn').addEventListener('click',()=>{
   if(!S.A||S.mode!=='video')return;
   const m={};S.A.metrics.forEach(x=>m[x.key]=x.display);
-  const run={id:Date.now(),date:new Date().toISOString(),skill:settings.skill,name:$('saveName').value.trim(),summary:S.A.summary,m,fix:S.A.topFix?S.A.topFix.name:''};
+  const adjusted=S.edits.joints.length>0||Object.keys(S.edits.phases[settings.skill]||{}).length>0;
+  const run={id:Date.now(),date:new Date().toISOString(),skill:settings.skill,adjusted,name:$('saveName').value.trim(),summary:S.A.summary,m,fix:S.A.topFix?S.A.topFix.name:''};
   const runs=[run,...store.get('hoplab.runs',[])].slice(0,50);
   if(store.set('hoplab.runs',runs)){setStatus('Saved.');$('saveRow').hidden=true;renderSaved()}else setStatus('Could not save on this device. Private browsing blocks storage.',true);
 });
